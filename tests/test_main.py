@@ -10,7 +10,10 @@ def db_path():
     fd, path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
     yield path
-    os.unlink(path)
+    try:
+        os.unlink(path)
+    except PermissionError:
+        pass  # Windows: SQLite may still hold the file
 
 @pytest.fixture
 def mock_sensors():
