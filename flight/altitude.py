@@ -28,6 +28,8 @@ class AltitudeCalculator:
         return altitude
 
     def update(self, pressure: float, temperature: float, timestamp: float) -> None:
+        if self._baseline_pressure is None and pressure > 0:
+            self.set_baseline(pressure, temperature)
         self.altitude = self.compute(pressure, temperature)
         if self._last_timestamp is not None:
             dt = timestamp - self._last_timestamp
