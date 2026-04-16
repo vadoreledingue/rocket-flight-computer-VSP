@@ -49,6 +49,12 @@ def create_api_blueprint() -> Blueprint:
         sm.disarm()
         return jsonify({"state": sm.state.value})
 
+    @bp.route("/api/calibrate", methods=["POST"])
+    def calibrate():
+        cfg = current_app.config["config_manager"]
+        cfg.set("calibrate_requested", True)
+        return jsonify({"status": "calibration requested"})
+
     @bp.route("/api/flights")
     def flights():
         db = current_app.config["db"]

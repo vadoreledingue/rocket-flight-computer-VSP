@@ -88,6 +88,9 @@ function setupControls() {
     document.getElementById('btn-disarm').addEventListener('click', async function() {
         await fetch('/api/disarm', { method: 'POST' });
     });
+    document.getElementById('btn-calibrate').addEventListener('click', async function() {
+        await fetch('/api/calibrate', { method: 'POST' });
+    });
     document.getElementById('btn-config').addEventListener('click', openConfig);
     document.getElementById('btn-config-close').addEventListener('click', closeConfig);
     document.getElementById('btn-config-save').addEventListener('click', saveConfig);

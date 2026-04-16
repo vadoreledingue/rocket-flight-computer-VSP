@@ -97,6 +97,11 @@ class FlightController:
             self.config.reload()
             self._last_config_check = now
 
+            # Check for calibration request from dashboard
+            if self.config.get("calibrate_requested"):
+                self.altitude_calc.set_baseline(data["pressure"], data["temperature"])
+                self.config.set("calibrate_requested", False)
+
     def get_sample_rate(self) -> float:
         state = self.state_machine.state
         if state in (FlightState.ASCENT, FlightState.APOGEE, FlightState.DESCENT):
