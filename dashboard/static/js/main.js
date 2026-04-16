@@ -48,13 +48,14 @@ function updateDashboard(d) {
     document.getElementById('humidity').textContent =
         (d.humidity != null ? d.humidity.toFixed(0) : '--') + ' %';
 
-    var pct = d.battery_pct || 0;
-    var fill = document.getElementById('battery-fill');
-    fill.style.width = pct + '%';
-    fill.className = 'bar-fill' + (pct < 15 ? ' critical' : pct < 30 ? ' warning' : '');
-    document.getElementById('battery-pct').textContent = pct.toFixed(0) + '%';
-    document.getElementById('voltage').textContent =
-        (d.battery_v != null ? d.battery_v.toFixed(2) : '--') + ' V';
+    var batEl = document.getElementById('battery-status');
+    if (d.battery_low) {
+        batEl.textContent = 'LOW';
+        batEl.className = 'value status-critical';
+    } else {
+        batEl.textContent = 'OK';
+        batEl.className = 'value status-active';
+    }
 
     var logEl = document.getElementById('logging-status');
     var isActive = d.state && d.state !== 'IDLE';

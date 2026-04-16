@@ -98,6 +98,7 @@ body {
 
 .status-active { color: var(--ok); }
 .status-inactive { color: var(--text-secondary); }
+.status-critical { color: var(--critical); font-weight: bold; }
 
 #controls {
     display: flex; align-items: center; gap: 12px;
