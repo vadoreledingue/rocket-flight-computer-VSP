@@ -76,6 +76,11 @@ def test_battery_test_lifecycle(db: FlightDB):
     assert len(history) == 1
     assert history[0]["state"] == "COMPLETED"
 
+    # Clear completed tests
+    deleted = db.delete_completed_battery_tests()
+    assert deleted == 1
+    assert db.get_battery_tests() == []
+
 
 def test_get_readings_since(db: FlightDB):
     now = time.time()

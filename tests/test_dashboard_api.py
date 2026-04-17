@@ -143,3 +143,26 @@ def test_api_battery_test_lifecycle(client):
     data = json.loads(resp.data)
     assert len(data) == 1
     assert data[0]["state"] == "COMPLETED"
+
+    # Clear history
+    resp = client.post("/api/battery-tests/clear")
+    assert resp.status_code == 200
+    data = json.loads(resp.data)
+    assert data["deleted"] == 1
+
+    resp = client.get("/api/battery-tests")
+    assert json.loads(resp.data) == []
+
+
+def test_api_hardware_status(client):
+    resp = client.get("/api/hardware")
+    assert resp.status_code == 200
+    data = json.loads(resp.data)
+    assert "pins" in data
+    assert "sensors" in data
+    assert len(data["pins"]) == 6
+    assert len(data["sensors"]) == 2
+    # On dev machine, i2cdetect not available, so sensors show not connected
+    for sensor in data["sensors"]:
+        assert "name" in sensor
+        assert "connected" in sensor

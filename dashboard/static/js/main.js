@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', function() {
     pollBatteryTest();
     setInterval(pollBatteryTest, 1000);
     loadBatteryHistory();
+    pollHardware();
+    setInterval(pollHardware, 5000);
 });
 
 function startPolling() {
@@ -35,6 +37,7 @@ function updateDashboard(d) {
     stateEl.textContent = d.state || 'IDLE';
     stateEl.className = 'state ' + (d.state || 'idle').toLowerCase();
 
+    // PFD: altitude and vertical speed
     document.getElementById('alt-value').textContent =
         (d.altitude != null ? d.altitude.toFixed(1) : '0') + ' m';
 
@@ -44,6 +47,7 @@ function updateDashboard(d) {
 
     attitude.update(d.roll || 0, d.pitch || 0);
 
+    // Environment readouts
     document.getElementById('pressure').textContent =
         (d.pressure != null ? d.pressure.toFixed(1) : '----') + ' hPa';
     document.getElementById('temperature').textContent =
@@ -51,6 +55,7 @@ function updateDashboard(d) {
     document.getElementById('humidity').textContent =
         (d.humidity != null ? d.humidity.toFixed(0) : '--') + ' %';
 
+    // Battery status
     var batEl = document.getElementById('battery-status');
     if (d.battery_low) {
         batEl.textContent = 'LOW';
@@ -60,11 +65,22 @@ function updateDashboard(d) {
         batEl.className = 'value status-active';
     }
 
+    // Logging status
     var logEl = document.getElementById('logging-status');
     var isActive = d.state && d.state !== 'IDLE';
     logEl.textContent = isActive ? 'ACTIVE' : 'INACTIVE';
     logEl.className = 'value ' + (isActive ? 'status-active' : 'status-inactive');
 
+    // IMU data
+    var hasImu = d.roll != null && (d.roll !== 0 || d.pitch !== 0 || d.yaw !== 0);
+    document.getElementById('imu-roll').textContent = hasImu ? d.roll.toFixed(1) + '\u00B0' : '--';
+    document.getElementById('imu-pitch').textContent = hasImu ? d.pitch.toFixed(1) + '\u00B0' : '--';
+    document.getElementById('imu-yaw').textContent = hasImu ? d.yaw.toFixed(1) + '\u00B0' : '--';
+    document.getElementById('imu-ax').textContent = hasImu ? d.accel_x.toFixed(2) + ' g' : '--';
+    document.getElementById('imu-ay').textContent = hasImu ? d.accel_y.toFixed(2) + ' g' : '--';
+    document.getElementById('imu-az').textContent = hasImu ? d.accel_z.toFixed(2) + ' g' : '--';
+
+    // Button states
     var isIdle = !d.state || d.state === 'IDLE';
     var isArmed = d.state === 'ARMED';
     document.getElementById('btn-arm').disabled = !isIdle;
@@ -108,6 +124,47 @@ function setupControls() {
         pollBatteryTest();
         loadBatteryHistory();
     });
+    document.getElementById('btn-bat-clear').addEventListener('click', async function() {
+        await fetch('/api/battery-tests/clear', { method: 'POST' });
+        loadBatteryHistory();
+    });
+}
+
+// -- Hardware status --
+
+async function pollHardware() {
+    try {
+        var resp = await fetch('/api/hardware');
+        var hw = await resp.json();
+
+        // I2C bus status
+        var i2cEl = document.getElementById('hw-i2c');
+        var anyI2c = hw.sensors.some(function(s) { return s.connected; });
+        i2cEl.textContent = anyI2c ? 'OK' : 'NO DEV';
+        i2cEl.className = 'pin-status ' + (anyI2c ? 'status-active' : 'status-inactive');
+
+        // LBO pin
+        var lboEl = document.getElementById('hw-lbo');
+        lboEl.textContent = 'READY';
+        lboEl.className = 'pin-status status-active';
+
+        // Deploy pin
+        var deployEl = document.getElementById('hw-deploy');
+        deployEl.textContent = 'READY';
+        deployEl.className = 'pin-status status-active';
+
+        // Sensors
+        hw.sensors.forEach(function(s) {
+            var id = 'hw-' + s.name.toLowerCase();
+            var el = document.getElementById(id);
+            if (el) {
+                el.textContent = s.connected ? 'OK' : 'N/C';
+                el.className = 'pin-status ' + (s.connected ? 'status-active' : 'status-inactive');
+            }
+        });
+    } catch (e) {
+        // ignore - not running on Pi
+    }
 }
 
 // -- Battery test --

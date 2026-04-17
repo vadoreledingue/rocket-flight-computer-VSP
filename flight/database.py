@@ -127,3 +127,10 @@ class FlightDB:
             "SELECT * FROM battery_tests ORDER BY id DESC"
         )
         return [dict(row) for row in cur.fetchall()]
+
+    def delete_completed_battery_tests(self) -> int:
+        cur = self.conn.execute(
+            "DELETE FROM battery_tests WHERE state='COMPLETED'"
+        )
+        self.conn.commit()
+        return cur.rowcount

@@ -14,26 +14,84 @@
     </header>
 
     <main id="instruments">
-        <section id="altitude-tape" class="instrument-panel">
-            <h2>ALTITUDE</h2>
-            <div class="tape-container">
-                <div id="alt-tape" class="tape"></div>
-                <div id="alt-value" class="tape-value">0 m</div>
+        <section id="pin-layout" class="instrument-panel">
+            <h2>HARDWARE STATUS</h2>
+            <div id="pin-list" class="pin-list">
+                <div class="pin-row">
+                    <span class="pin-label">5V / GND</span>
+                    <span class="pin-status status-active">PWR</span>
+                </div>
+                <div class="pin-row">
+                    <span class="pin-label">I2C SDA/SCL</span>
+                    <span id="hw-i2c" class="pin-status">--</span>
+                </div>
+                <div class="pin-row">
+                    <span class="pin-label">GPIO4 LBO</span>
+                    <span id="hw-lbo" class="pin-status">--</span>
+                </div>
+                <div class="pin-row">
+                    <span class="pin-label">GPIO17 Deploy</span>
+                    <span id="hw-deploy" class="pin-status">--</span>
+                </div>
+            </div>
+            <div class="sensor-list">
+                <h3>I2C SENSORS</h3>
+                <div class="pin-row">
+                    <span class="pin-label">BME280 (0x76)</span>
+                    <span id="hw-bme280" class="pin-status">--</span>
+                </div>
+                <div class="pin-row">
+                    <span class="pin-label">BNO055 (0x28)</span>
+                    <span id="hw-bno055" class="pin-status">--</span>
+                </div>
             </div>
         </section>
 
         <section id="attitude-indicator" class="instrument-panel center-panel">
-            <h2>ATTITUDE</h2>
-            <div id="attitude-container">
-                <canvas id="attitude-canvas" width="300" height="300"></canvas>
+            <h2>PRIMARY FLIGHT DISPLAY</h2>
+            <div id="pfd-container">
+                <div id="pfd-alt" class="pfd-readout pfd-left">
+                    <span class="pfd-label">ALT</span>
+                    <span id="alt-value" class="pfd-value">0 m</span>
+                </div>
+                <div id="attitude-container">
+                    <canvas id="attitude-canvas" width="300" height="300"></canvas>
+                </div>
+                <div id="pfd-vs" class="pfd-readout pfd-right">
+                    <span class="pfd-label">VS</span>
+                    <span id="vs-value" class="pfd-value">0.0 m/s</span>
+                </div>
             </div>
         </section>
 
-        <section id="vspeed-tape" class="instrument-panel">
-            <h2>VERTICAL SPEED</h2>
-            <div class="tape-container">
-                <div id="vs-tape" class="tape"></div>
-                <div id="vs-value" class="tape-value">0.0 m/s</div>
+        <section id="imu-panel" class="instrument-panel">
+            <h2>IMU DATA</h2>
+            <div class="imu-readouts">
+                <div class="readout-row">
+                    <span class="label">Roll</span>
+                    <span id="imu-roll" class="value">--</span>
+                </div>
+                <div class="readout-row">
+                    <span class="label">Pitch</span>
+                    <span id="imu-pitch" class="value">--</span>
+                </div>
+                <div class="readout-row">
+                    <span class="label">Yaw</span>
+                    <span id="imu-yaw" class="value">--</span>
+                </div>
+                <div class="imu-separator"></div>
+                <div class="readout-row">
+                    <span class="label">Accel X</span>
+                    <span id="imu-ax" class="value">--</span>
+                </div>
+                <div class="readout-row">
+                    <span class="label">Accel Y</span>
+                    <span id="imu-ay" class="value">--</span>
+                </div>
+                <div class="readout-row">
+                    <span class="label">Accel Z</span>
+                    <span id="imu-az" class="value">--</span>
+                </div>
             </div>
         </section>
     </main>
@@ -90,6 +148,7 @@
             <div class="bat-test-controls">
                 <button id="btn-bat-start" class="ctrl-btn">START TEST</button>
                 <button id="btn-bat-stop" class="ctrl-btn" disabled>STOP TEST</button>
+                <button id="btn-bat-clear" class="ctrl-btn btn-danger">CLEAR HISTORY</button>
             </div>
             <div id="bat-test-history" class="bat-history"></div>
         </section>

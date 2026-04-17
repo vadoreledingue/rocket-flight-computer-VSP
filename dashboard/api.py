@@ -1,3 +1,4 @@
+import subprocess
 import time
 from flask import Blueprint, request, jsonify, current_app
 
@@ -91,4 +92,48 @@ def create_api_blueprint() -> Blueprint:
         db = current_app.config["db"]
         return jsonify(db.get_battery_tests())
 
+    @bp.route("/api/battery-tests/clear", methods=["POST"])
+    def battery_test_clear():
+        db = current_app.config["db"]
+        deleted = db.delete_completed_battery_tests()
+        return jsonify({"deleted": deleted})
+
+    @bp.route("/api/hardware")
+    def hardware_status():
+        cfg = current_app.config["config_manager"]
+        pins = [
+            {"pin": 2, "gpio": "5V", "label": "PowerBoost 5V", "type": "power"},
+            {"pin": 3, "gpio": "SDA", "label": "I2C Data", "type": "i2c"},
+            {"pin": 5, "gpio": "SCL", "label": "I2C Clock", "type": "i2c"},
+            {"pin": 6, "gpio": "GND", "label": "PowerBoost GND", "type": "power"},
+            {"pin": 7, "gpio": "GPIO4", "label": "Battery LBO", "type": "input"},
+            {"pin": 11, "gpio": "GPIO17", "label": "Deploy", "type": "output"},
+        ]
+        # Scan I2C bus for connected sensors
+        i2c_devices = _scan_i2c()
+        sensors = [
+            {"name": "BME280", "addr": "0x76", "connected": "0x76" in i2c_devices,
+             "function": "Pressure/Temp/Humidity"},
+            {"name": "BNO055", "addr": "0x28", "connected": "0x28" in i2c_devices,
+             "function": "IMU (9-DOF)"},
+        ]
+        return jsonify({"pins": pins, "sensors": sensors})
+
     return bp
+
+
+def _scan_i2c() -> list[str]:
+    """Scan I2C bus 1 and return list of detected hex addresses."""
+    try:
+        result = subprocess.run(
+            ["i2cdetect", "-y", "1"],
+            capture_output=True, text=True, timeout=5,
+        )
+        devices = []
+        for line in result.stdout.splitlines()[1:]:
+            for token in line.split()[1:]:
+                if token != "--" and len(token) == 2:
+                    devices.append("0x" + token)
+        return devices
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return []
