@@ -117,7 +117,8 @@ def create_api_blueprint() -> Blueprint:
             {"name": "BNO055", "addr": "0x28", "connected": "0x28" in i2c_devices,
              "function": "IMU (9-DOF)"},
         ]
-        return jsonify({"pins": pins, "sensors": sensors})
+        power = _get_power_status()
+        return jsonify({"pins": pins, "sensors": sensors, "power": power})
 
     return bp
 
@@ -137,3 +138,27 @@ def _scan_i2c() -> list[str]:
         return devices
     except (FileNotFoundError, subprocess.TimeoutExpired):
         return []
+
+
+def _get_power_status() -> dict:
+    """Read Pi supply voltage status via vcgencmd.
+
+    Returns dict with:
+      - undervoltage: bool (currently under ~4.63V)
+      - throttled_hex: str (raw throttled value)
+    """
+    try:
+        result = subprocess.run(
+            ["vcgencmd", "get_throttled"],
+            capture_output=True, text=True, timeout=5,
+        )
+        # Output: "throttled=0x0" or "throttled=0x50005" etc.
+        raw = result.stdout.strip()
+        hex_str = raw.split("=")[-1]
+        flags = int(hex_str, 16)
+        return {
+            "undervoltage": bool(flags & 0x1),
+            "throttled_hex": hex_str,
+        }
+    except (FileNotFoundError, subprocess.TimeoutExpired, ValueError):
+        return {"undervoltage": None, "throttled_hex": None}

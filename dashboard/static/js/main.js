@@ -162,6 +162,21 @@ async function pollHardware() {
                 el.className = 'pin-status ' + (s.connected ? 'status-active' : 'status-inactive');
             }
         });
+
+        // Supply voltage status
+        var supplyEl = document.getElementById('supply-status');
+        if (hw.power && hw.power.undervoltage !== null) {
+            if (hw.power.undervoltage) {
+                supplyEl.textContent = 'LOW';
+                supplyEl.className = 'value status-critical';
+            } else {
+                supplyEl.textContent = 'OK';
+                supplyEl.className = 'value status-active';
+            }
+        } else {
+            supplyEl.textContent = 'N/A';
+            supplyEl.className = 'value status-inactive';
+        }
     } catch (e) {
         // ignore - not running on Pi
     }
