@@ -34,12 +34,12 @@ class FlightController:
 
     def _init_sensors(self) -> None:
         if self._bme is None:
-            from flight.sensors.bme280 import BME280Sensor
-            self._bme = BME280Sensor()
+            from flight.sensors.bmp280 import BMP280Sensor
+            self._bme = BMP280Sensor()
         if self._bno is None:
-            from flight.sensors.bno055 import BNO055Sensor
+            from flight.sensors.mpu6050 import MPU6050Sensor
             try:
-                self._bno = BNO055Sensor()
+                self._bno = MPU6050Sensor()
             except Exception:
                 self._bno = None
         if self._pwr is None:
@@ -82,7 +82,8 @@ class FlightController:
         current_state = self.state_machine.state
         if current_state == FlightState.ARMED and self.logger.flight_id is None:
             self.logger.start_flight()
-            self.altitude_calc.set_baseline(data["pressure"], data["temperature"])
+            self.altitude_calc.set_baseline(
+                data["pressure"], data["temperature"])
             self._flight_start_time = now
             self._max_vspeed = 0.0
 
@@ -99,7 +100,8 @@ class FlightController:
 
             # Check for calibration request from dashboard
             if self.config.get("calibrate_requested"):
-                self.altitude_calc.set_baseline(data["pressure"], data["temperature"])
+                self.altitude_calc.set_baseline(
+                    data["pressure"], data["temperature"])
                 self.config.set("calibrate_requested", False)
 
             # Track battery LOW for active battery test

@@ -1,13 +1,13 @@
 import pytest
 from unittest.mock import MagicMock, patch
-from flight.sensors.bme280 import BME280Sensor
-from flight.sensors.bno055 import BNO055Sensor
+from flight.sensors.bmp280 import BMP280Sensor
+from flight.sensors.mpu6050 import MPU6050Sensor
 from flight.sensors.power import PowerSensor
 
 
-class TestBME280:
+class TestBMP280:
     def test_read_returns_dict_with_required_keys(self):
-        sensor = BME280Sensor.__new__(BME280Sensor)
+        sensor = BMP280Sensor.__new__(BMP280Sensor)
         sensor._device = MagicMock()
         sensor._device.pressure = 1013.25
         sensor._device.temperature = 21.0
@@ -19,7 +19,7 @@ class TestBME280:
         assert data["pressure"] == pytest.approx(1013.25)
 
     def test_read_returns_none_on_error(self):
-        sensor = BME280Sensor.__new__(BME280Sensor)
+        sensor = BMP280Sensor.__new__(BMP280Sensor)
         sensor._device = MagicMock()
         type(sensor._device).pressure = property(
             lambda s: (_ for _ in ()).throw(OSError("I2C"))
@@ -28,9 +28,9 @@ class TestBME280:
         assert data is None
 
 
-class TestBNO055:
+class TestMPU6050:
     def test_read_returns_orientation_and_accel(self):
-        sensor = BNO055Sensor.__new__(BNO055Sensor)
+        sensor = MPU6050Sensor.__new__(MPU6050Sensor)
         sensor._device = MagicMock()
         sensor._device.acceleration = (0.1, 0.2, 9.8)
         sensor._device.gyro = (0.01, 0.02, 0.03)
@@ -45,7 +45,7 @@ class TestBNO055:
         assert data["gyro_z"] == pytest.approx(0.03)
 
     def test_read_returns_none_on_error(self):
-        sensor = BNO055Sensor.__new__(BNO055Sensor)
+        sensor = MPU6050Sensor.__new__(MPU6050Sensor)
         sensor._device = MagicMock()
         type(sensor._device).acceleration = property(
             lambda s: (_ for _ in ()).throw(OSError("I2C"))

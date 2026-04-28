@@ -15,6 +15,7 @@
 ## Task 1: Database Schema and Access Layer
 
 **Files:**
+
 - Create: `db/schema.sql`
 - Create: `flight/database.py`
 - Create: `tests/test_database.py`
@@ -272,6 +273,7 @@ git commit -m "feat: add SQLite database schema and access layer"
 ## Task 2: Configuration Manager
 
 **Files:**
+
 - Create: `flight/config.py`
 - Create: `tests/test_config.py`
 
@@ -391,6 +393,7 @@ git commit -m "feat: add configuration manager with defaults and DB persistence"
 ## Task 3: Altitude Calculator
 
 **Files:**
+
 - Create: `flight/altitude.py`
 - Create: `tests/test_altitude.py`
 
@@ -503,6 +506,7 @@ git commit -m "feat: add barometric altitude calculator with vertical speed"
 ## Task 4: Sensor Abstractions (BME280, BNO055, PowerBoost)
 
 **Files:**
+
 - Create: `flight/sensors/__init__.py`
 - Create: `flight/sensors/bme280.py`
 - Create: `flight/sensors/bno055.py`
@@ -515,13 +519,13 @@ git commit -m "feat: add barometric altitude calculator with vertical speed"
 # tests/test_sensors.py
 import pytest
 from unittest.mock import MagicMock, patch
-from flight.sensors.bme280 import BME280Sensor
-from flight.sensors.bno055 import BNO055Sensor
+from flight.sensors.bmp280 import BMP280Sensor
+from flight.sensors.mpu6050 import MPU6050Sensor
 from flight.sensors.power import PowerSensor
 
-class TestBME280:
+class TestBMP280:
     def test_read_returns_dict_with_required_keys(self):
-        with patch("flight.sensors.bme280.board"), \
+        with patch("flight.sensors.bmp280.board"), \
              patch("flight.sensors.bme280.busio"), \
              patch("flight.sensors.bme280.adafruit_bme280"):
             sensor = BME280Sensor.__new__(BME280Sensor)
@@ -715,6 +719,7 @@ git commit -m "feat: add sensor abstractions for BME280, BNO055, PowerBoost"
 ## Task 5: Flight State Machine
 
 **Files:**
+
 - Create: `flight/state_machine.py`
 - Create: `tests/test_state_machine.py`
 
@@ -949,6 +954,7 @@ git commit -m "feat: add flight state machine with apogee detection and safety c
 ## Task 6: Deployment Controller (GPIO)
 
 **Files:**
+
 - Create: `flight/deployment.py`
 - Create: `tests/test_deployment.py`
 
@@ -1063,6 +1069,7 @@ git commit -m "feat: add GPIO deployment controller for parachute release"
 ## Task 7: Data Logger
 
 **Files:**
+
 - Create: `flight/logger.py`
 - Create: `tests/test_logger.py`
 
@@ -1192,6 +1199,7 @@ git commit -m "feat: add flight data logger with flight lifecycle management"
 ## Task 8: Flight Controller Main Loop
 
 **Files:**
+
 - Create: `flight/main.py`
 - Create: `tests/test_main.py`
 
@@ -1312,12 +1320,12 @@ class FlightController:
 
     def _init_sensors(self) -> None:
         if self._bme is None:
-            from flight.sensors.bme280 import BME280Sensor
-            self._bme = BME280Sensor()
+            from flight.sensors.bmp280 import BMP280Sensor
+            self._bme = BMP280Sensor()
         if self._bno is None:
-            from flight.sensors.bno055 import BNO055Sensor
+            from flight.sensors.mpu6050 import MPU6050Sensor
             try:
-                self._bno = BNO055Sensor()
+                self._bno = MPU6050Sensor()
             except Exception:
                 self._bno = None
         if self._pwr is None:
@@ -1442,6 +1450,7 @@ git commit -m "feat: add flight controller main loop with sensor integration"
 ## Task 9: Dashboard Flask Backend
 
 **Files:**
+
 - Create: `dashboard/__init__.py`
 - Create: `dashboard/app.py`
 - Create: `dashboard/api.py`
@@ -1671,6 +1680,7 @@ git commit -m "feat: add Flask dashboard backend with REST API"
 ## Task 10: Dashboard Frontend – HTML Structure
 
 **Files:**
+
 - Create: `dashboard/templates/dashboard.html`
 - Create: `dashboard/static/css/cockpit.css`
 
@@ -1680,106 +1690,111 @@ git commit -m "feat: add Flask dashboard backend with REST API"
 <!-- dashboard/templates/dashboard.html -->
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rocket Flight Computer</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/cockpit.css') }}">
-</head>
-<body>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/cockpit.css') }}"
+    />
+  </head>
+  <body>
     <header id="top-bar">
-        <span class="title">ROCKET FLIGHT COMPUTER</span>
-        <span id="flight-state" class="state">IDLE</span>
-        <span id="clock" class="clock">00:00:00</span>
+      <span class="title">ROCKET FLIGHT COMPUTER</span>
+      <span id="flight-state" class="state">IDLE</span>
+      <span id="clock" class="clock">00:00:00</span>
     </header>
 
     <main id="instruments">
-        <section id="altitude-tape" class="instrument-panel">
-            <h2>ALTITUDE</h2>
-            <div class="tape-container">
-                <div id="alt-tape" class="tape"></div>
-                <div id="alt-value" class="tape-value">0 m</div>
-            </div>
-        </section>
+      <section id="altitude-tape" class="instrument-panel">
+        <h2>ALTITUDE</h2>
+        <div class="tape-container">
+          <div id="alt-tape" class="tape"></div>
+          <div id="alt-value" class="tape-value">0 m</div>
+        </div>
+      </section>
 
-        <section id="attitude-indicator" class="instrument-panel center-panel">
-            <h2>ATTITUDE</h2>
-            <div id="attitude-container">
-                <canvas id="attitude-canvas" width="300" height="300"></canvas>
-            </div>
-        </section>
+      <section id="attitude-indicator" class="instrument-panel center-panel">
+        <h2>ATTITUDE</h2>
+        <div id="attitude-container">
+          <canvas id="attitude-canvas" width="300" height="300"></canvas>
+        </div>
+      </section>
 
-        <section id="vspeed-tape" class="instrument-panel">
-            <h2>VERTICAL SPEED</h2>
-            <div class="tape-container">
-                <div id="vs-tape" class="tape"></div>
-                <div id="vs-value" class="tape-value">0.0 m/s</div>
-            </div>
-        </section>
+      <section id="vspeed-tape" class="instrument-panel">
+        <h2>VERTICAL SPEED</h2>
+        <div class="tape-container">
+          <div id="vs-tape" class="tape"></div>
+          <div id="vs-value" class="tape-value">0.0 m/s</div>
+        </div>
+      </section>
     </main>
 
     <div id="readouts">
-        <section id="environment" class="readout-panel">
-            <h2>ENVIRONMENT</h2>
-            <div class="readout-row">
-                <span class="label">Pressure</span>
-                <span id="pressure" class="value">---- hPa</span>
-            </div>
-            <div class="readout-row">
-                <span class="label">Temperature</span>
-                <span id="temperature" class="value">-- &deg;C</span>
-            </div>
-            <div class="readout-row">
-                <span class="label">Humidity</span>
-                <span id="humidity" class="value">-- %</span>
-            </div>
-        </section>
+      <section id="environment" class="readout-panel">
+        <h2>ENVIRONMENT</h2>
+        <div class="readout-row">
+          <span class="label">Pressure</span>
+          <span id="pressure" class="value">---- hPa</span>
+        </div>
+        <div class="readout-row">
+          <span class="label">Temperature</span>
+          <span id="temperature" class="value">-- &deg;C</span>
+        </div>
+        <div class="readout-row">
+          <span class="label">Humidity</span>
+          <span id="humidity" class="value">-- %</span>
+        </div>
+      </section>
 
-        <section id="system" class="readout-panel">
-            <h2>SYSTEM</h2>
-            <div class="readout-row">
-                <span class="label">Battery</span>
-                <div id="battery-bar" class="bar-container">
-                    <div id="battery-fill" class="bar-fill"></div>
-                    <span id="battery-pct" class="bar-text">--%</span>
-                </div>
-            </div>
-            <div class="readout-row">
-                <span class="label">Voltage</span>
-                <span id="voltage" class="value">-- V</span>
-            </div>
-            <div class="readout-row">
-                <span class="label">Flight Time</span>
-                <span id="flight-time" class="value">00:00:00</span>
-            </div>
-            <div class="readout-row">
-                <span class="label">Logging</span>
-                <span id="logging-status" class="value status-inactive">INACTIVE</span>
-            </div>
-        </section>
+      <section id="system" class="readout-panel">
+        <h2>SYSTEM</h2>
+        <div class="readout-row">
+          <span class="label">Battery</span>
+          <div id="battery-bar" class="bar-container">
+            <div id="battery-fill" class="bar-fill"></div>
+            <span id="battery-pct" class="bar-text">--%</span>
+          </div>
+        </div>
+        <div class="readout-row">
+          <span class="label">Voltage</span>
+          <span id="voltage" class="value">-- V</span>
+        </div>
+        <div class="readout-row">
+          <span class="label">Flight Time</span>
+          <span id="flight-time" class="value">00:00:00</span>
+        </div>
+        <div class="readout-row">
+          <span class="label">Logging</span>
+          <span id="logging-status" class="value status-inactive"
+            >INACTIVE</span
+          >
+        </div>
+      </section>
     </div>
 
     <footer id="controls">
-        <button id="btn-arm" class="ctrl-btn">ARM</button>
-        <button id="btn-disarm" class="ctrl-btn" disabled>DISARM</button>
-        <button id="btn-config" class="ctrl-btn">CONFIG</button>
-        <span id="connection-status" class="conn-status">Connecting...</span>
+      <button id="btn-arm" class="ctrl-btn">ARM</button>
+      <button id="btn-disarm" class="ctrl-btn" disabled>DISARM</button>
+      <button id="btn-config" class="ctrl-btn">CONFIG</button>
+      <span id="connection-status" class="conn-status">Connecting...</span>
     </footer>
 
     <div id="config-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2>CONFIGURATION</h2>
-            <div id="config-fields"></div>
-            <div class="modal-actions">
-                <button id="btn-config-save" class="ctrl-btn">SAVE</button>
-                <button id="btn-config-close" class="ctrl-btn">CLOSE</button>
-            </div>
+      <div class="modal-content">
+        <h2>CONFIGURATION</h2>
+        <div id="config-fields"></div>
+        <div class="modal-actions">
+          <button id="btn-config-save" class="ctrl-btn">SAVE</button>
+          <button id="btn-config-close" class="ctrl-btn">CLOSE</button>
         </div>
+      </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/gauges.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-</body>
+  </body>
 </html>
 ```
 
@@ -1789,315 +1804,346 @@ git commit -m "feat: add Flask dashboard backend with REST API"
 /* dashboard/static/css/cockpit.css */
 
 /* === Reset & Base === */
-*, *::before, *::after {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 :root {
-    --bg-dark: #0a1628;
-    --bg-panel: #111d35;
-    --bg-instrument: #0d1829;
-    --text-primary: #ffffff;
-    --text-secondary: #8899bb;
-    --accent: #00ccff;
-    --warning: #ffaa00;
-    --critical: #ff3344;
-    --ok: #00ff88;
-    --border: #1e3a5f;
-    --font-mono: 'Courier New', 'Consolas', monospace;
+  --bg-dark: #0a1628;
+  --bg-panel: #111d35;
+  --bg-instrument: #0d1829;
+  --text-primary: #ffffff;
+  --text-secondary: #8899bb;
+  --accent: #00ccff;
+  --warning: #ffaa00;
+  --critical: #ff3344;
+  --ok: #00ff88;
+  --border: #1e3a5f;
+  --font-mono: "Courier New", "Consolas", monospace;
 }
 
 body {
-    background: var(--bg-dark);
-    color: var(--text-primary);
-    font-family: var(--font-mono);
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* === Header === */
 #top-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 24px;
-    background: var(--bg-panel);
-    border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
 }
 
 .title {
-    font-size: 16px;
-    letter-spacing: 3px;
-    color: var(--accent);
-    font-weight: bold;
+  font-size: 16px;
+  letter-spacing: 3px;
+  color: var(--accent);
+  font-weight: bold;
 }
 
 .state {
-    font-size: 18px;
-    padding: 4px 16px;
-    border: 1px solid var(--accent);
-    border-radius: 4px;
-    letter-spacing: 2px;
+  font-size: 18px;
+  padding: 4px 16px;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  letter-spacing: 2px;
 }
 
-.state.armed { border-color: var(--warning); color: var(--warning); }
-.state.ascent { border-color: var(--ok); color: var(--ok); }
-.state.apogee { border-color: var(--critical); color: var(--critical); }
-.state.descent { border-color: var(--warning); color: var(--warning); }
-.state.landed { border-color: var(--ok); color: var(--ok); }
+.state.armed {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+.state.ascent {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+.state.apogee {
+  border-color: var(--critical);
+  color: var(--critical);
+}
+.state.descent {
+  border-color: var(--warning);
+  color: var(--warning);
+}
+.state.landed {
+  border-color: var(--ok);
+  color: var(--ok);
+}
 
 .clock {
-    font-size: 16px;
-    color: var(--text-secondary);
+  font-size: 16px;
+  color: var(--text-secondary);
 }
 
 /* === Instruments === */
 #instruments {
-    display: grid;
-    grid-template-columns: 1fr 2fr 1fr;
-    gap: 8px;
-    padding: 8px;
-    flex: 1;
-    min-height: 300px;
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  gap: 8px;
+  padding: 8px;
+  flex: 1;
+  min-height: 300px;
 }
 
 .instrument-panel {
-    background: var(--bg-instrument);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 12px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+  background: var(--bg-instrument);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 
 .instrument-panel h2 {
-    font-size: 11px;
-    letter-spacing: 2px;
-    color: var(--text-secondary);
-    margin-bottom: 8px;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
 }
 
 .tape-container {
-    flex: 1;
-    width: 80px;
-    position: relative;
-    overflow: hidden;
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    background: var(--bg-dark);
+  flex: 1;
+  width: 80px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  background: var(--bg-dark);
 }
 
 .tape-value {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    transform: translate(-50%, -50%);
-    background: var(--bg-panel);
-    border: 1px solid var(--accent);
-    padding: 4px 8px;
-    font-size: 16px;
-    font-weight: bold;
-    color: var(--accent);
-    z-index: 2;
-    white-space: nowrap;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--bg-panel);
+  border: 1px solid var(--accent);
+  padding: 4px 8px;
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--accent);
+  z-index: 2;
+  white-space: nowrap;
 }
 
 .center-panel {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 #attitude-canvas {
-    border-radius: 50%;
-    border: 2px solid var(--border);
+  border-radius: 50%;
+  border: 2px solid var(--border);
 }
 
 /* === Readouts === */
 #readouts {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    padding: 0 8px 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 0 8px 8px;
 }
 
 .readout-panel {
-    background: var(--bg-panel);
-    border: 1px solid var(--border);
-    border-radius: 4px;
-    padding: 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 12px;
 }
 
 .readout-panel h2 {
-    font-size: 11px;
-    letter-spacing: 2px;
-    color: var(--text-secondary);
-    margin-bottom: 8px;
-    border-bottom: 1px solid var(--border);
-    padding-bottom: 6px;
+  font-size: 11px;
+  letter-spacing: 2px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
 }
 
 .readout-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
 }
 
 .label {
-    font-size: 12px;
-    color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 1px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .value {
-    font-size: 16px;
-    font-weight: bold;
-    color: var(--text-primary);
+  font-size: 16px;
+  font-weight: bold;
+  color: var(--text-primary);
 }
 
 /* Battery bar */
 .bar-container {
-    width: 120px;
-    height: 20px;
-    background: var(--bg-dark);
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    position: relative;
+  width: 120px;
+  height: 20px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  position: relative;
 }
 
 .bar-fill {
-    height: 100%;
-    background: var(--ok);
-    border-radius: 1px;
-    transition: width 0.3s ease;
+  height: 100%;
+  background: var(--ok);
+  border-radius: 1px;
+  transition: width 0.3s ease;
 }
 
-.bar-fill.warning { background: var(--warning); }
-.bar-fill.critical { background: var(--critical); }
+.bar-fill.warning {
+  background: var(--warning);
+}
+.bar-fill.critical {
+  background: var(--critical);
+}
 
 .bar-text {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    font-size: 11px;
-    font-weight: bold;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 11px;
+  font-weight: bold;
 }
 
-.status-active { color: var(--ok); }
-.status-inactive { color: var(--text-secondary); }
+.status-active {
+  color: var(--ok);
+}
+.status-inactive {
+  color: var(--text-secondary);
+}
 
 /* === Controls === */
 #controls {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 12px 24px;
-    background: var(--bg-panel);
-    border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 24px;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
 }
 
 .ctrl-btn {
-    background: var(--bg-instrument);
-    color: var(--text-primary);
-    border: 1px solid var(--border);
-    padding: 8px 24px;
-    font-family: var(--font-mono);
-    font-size: 13px;
-    letter-spacing: 2px;
-    cursor: pointer;
-    border-radius: 3px;
-    transition: all 0.15s ease;
+  background: var(--bg-instrument);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  padding: 8px 24px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  letter-spacing: 2px;
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.15s ease;
 }
 
 .ctrl-btn:hover:not(:disabled) {
-    border-color: var(--accent);
-    color: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .ctrl-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .conn-status {
-    margin-left: auto;
-    font-size: 12px;
-    color: var(--text-secondary);
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
-.conn-status.connected { color: var(--ok); }
-.conn-status.disconnected { color: var(--critical); }
+.conn-status.connected {
+  color: var(--ok);
+}
+.conn-status.disconnected {
+  color: var(--critical);
+}
 
 /* === Config Modal === */
 .modal {
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.7);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
 }
 
-.modal.hidden { display: none; }
+.modal.hidden {
+  display: none;
+}
 
 .modal-content {
-    background: var(--bg-panel);
-    border: 1px solid var(--accent);
-    border-radius: 6px;
-    padding: 24px;
-    min-width: 400px;
-    max-width: 500px;
+  background: var(--bg-panel);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 24px;
+  min-width: 400px;
+  max-width: 500px;
 }
 
 .modal-content h2 {
-    font-size: 14px;
-    letter-spacing: 2px;
-    color: var(--accent);
-    margin-bottom: 16px;
+  font-size: 14px;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-bottom: 16px;
 }
 
 .modal-actions {
-    display: flex;
-    gap: 12px;
-    margin-top: 16px;
-    justify-content: flex-end;
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  justify-content: flex-end;
 }
 
 .config-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
 }
 
 .config-row label {
-    font-size: 12px;
-    color: var(--text-secondary);
+  font-size: 12px;
+  color: var(--text-secondary);
 }
 
 .config-row input {
-    background: var(--bg-dark);
-    border: 1px solid var(--border);
-    color: var(--text-primary);
-    font-family: var(--font-mono);
-    padding: 4px 8px;
-    width: 100px;
-    text-align: right;
-    border-radius: 2px;
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  padding: 4px 8px;
+  width: 100px;
+  text-align: right;
+  border-radius: 2px;
 }
 
 .config-row input:focus {
-    outline: none;
-    border-color: var(--accent);
+  outline: none;
+  border-color: var(--accent);
 }
 ```
 
@@ -2118,6 +2164,7 @@ git commit -m "feat: add avionics cockpit dashboard HTML and CSS"
 ## Task 11: Dashboard Frontend – JavaScript (Polling & Gauges)
 
 **Files:**
+
 - Create: `dashboard/static/js/main.js`
 - Create: `dashboard/static/js/gauges.js`
 
@@ -2127,98 +2174,98 @@ git commit -m "feat: add avionics cockpit dashboard HTML and CSS"
 // dashboard/static/js/gauges.js
 
 class AttitudeIndicator {
-    constructor(canvasId) {
-        this.canvas = document.getElementById(canvasId);
-        this.ctx = this.canvas.getContext('2d');
-        this.cx = this.canvas.width / 2;
-        this.cy = this.canvas.height / 2;
-        this.r = Math.min(this.cx, this.cy) - 4;
-        this.roll = 0;
-        this.pitch = 0;
-        this.draw();
+  constructor(canvasId) {
+    this.canvas = document.getElementById(canvasId);
+    this.ctx = this.canvas.getContext("2d");
+    this.cx = this.canvas.width / 2;
+    this.cy = this.canvas.height / 2;
+    this.r = Math.min(this.cx, this.cy) - 4;
+    this.roll = 0;
+    this.pitch = 0;
+    this.draw();
+  }
+
+  update(roll, pitch) {
+    this.roll = roll || 0;
+    this.pitch = pitch || 0;
+    this.draw();
+  }
+
+  draw() {
+    const ctx = this.ctx;
+    const cx = this.cx;
+    const cy = this.cy;
+    const r = this.r;
+
+    ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.clip();
+
+    ctx.translate(cx, cy);
+    ctx.rotate((-this.roll * Math.PI) / 180);
+
+    // Pitch offset: 2px per degree
+    const pitchOffset = this.pitch * 2;
+
+    // Sky
+    ctx.fillStyle = "#1a3a6a";
+    ctx.fillRect(-r, -r + pitchOffset, r * 2, r);
+
+    // Ground
+    ctx.fillStyle = "#4a2a0a";
+    ctx.fillRect(-r, pitchOffset, r * 2, r);
+
+    // Horizon line
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-r, pitchOffset);
+    ctx.lineTo(r, pitchOffset);
+    ctx.stroke();
+
+    // Pitch ladder
+    ctx.strokeStyle = "#ffffff";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "10px Courier New";
+    ctx.textAlign = "center";
+    ctx.lineWidth = 1;
+    for (let deg = -30; deg <= 30; deg += 10) {
+      if (deg === 0) continue;
+      const y = pitchOffset - deg * 2;
+      const w = Math.abs(deg) >= 20 ? 30 : 20;
+      ctx.beginPath();
+      ctx.moveTo(-w, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+      ctx.fillText(Math.abs(deg).toString(), w + 14, y + 3);
     }
 
-    update(roll, pitch) {
-        this.roll = roll || 0;
-        this.pitch = pitch || 0;
-        this.draw();
-    }
+    ctx.restore();
 
-    draw() {
-        const ctx = this.ctx;
-        const cx = this.cx;
-        const cy = this.cy;
-        const r = this.r;
+    // Fixed aircraft symbol
+    ctx.strokeStyle = "#00ccff";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx - 40, cy);
+    ctx.lineTo(cx - 15, cy);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx + 15, cy);
+    ctx.lineTo(cx + 40, cy);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(cx, cy, 4, 0, Math.PI * 2);
+    ctx.stroke();
 
-        ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.clip();
-
-        ctx.translate(cx, cy);
-        ctx.rotate((-this.roll * Math.PI) / 180);
-
-        // Pitch offset: 2px per degree
-        const pitchOffset = this.pitch * 2;
-
-        // Sky
-        ctx.fillStyle = '#1a3a6a';
-        ctx.fillRect(-r, -r + pitchOffset, r * 2, r);
-
-        // Ground
-        ctx.fillStyle = '#4a2a0a';
-        ctx.fillRect(-r, pitchOffset, r * 2, r);
-
-        // Horizon line
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(-r, pitchOffset);
-        ctx.lineTo(r, pitchOffset);
-        ctx.stroke();
-
-        // Pitch ladder
-        ctx.strokeStyle = '#ffffff';
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '10px Courier New';
-        ctx.textAlign = 'center';
-        ctx.lineWidth = 1;
-        for (let deg = -30; deg <= 30; deg += 10) {
-            if (deg === 0) continue;
-            const y = pitchOffset - deg * 2;
-            const w = Math.abs(deg) >= 20 ? 30 : 20;
-            ctx.beginPath();
-            ctx.moveTo(-w, y);
-            ctx.lineTo(w, y);
-            ctx.stroke();
-            ctx.fillText(Math.abs(deg).toString(), w + 14, y + 3);
-        }
-
-        ctx.restore();
-
-        // Fixed aircraft symbol
-        ctx.strokeStyle = '#00ccff';
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.moveTo(cx - 40, cy);
-        ctx.lineTo(cx - 15, cy);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(cx + 15, cy);
-        ctx.lineTo(cx + 40, cy);
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(cx, cy, 4, 0, Math.PI * 2);
-        ctx.stroke();
-
-        // Outer ring
-        ctx.strokeStyle = '#1e3a5f';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(cx, cy, r, 0, Math.PI * 2);
-        ctx.stroke();
-    }
+    // Outer ring
+    ctx.strokeStyle = "#1e3a5f";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+  }
 }
 ```
 
@@ -2231,158 +2278,166 @@ let attitude;
 let pollInterval;
 const POLL_MS = 500;
 
-document.addEventListener('DOMContentLoaded', function() {
-    attitude = new AttitudeIndicator('attitude-canvas');
-    startPolling();
-    setupControls();
-    updateClock();
-    setInterval(updateClock, 1000);
+document.addEventListener("DOMContentLoaded", function () {
+  attitude = new AttitudeIndicator("attitude-canvas");
+  startPolling();
+  setupControls();
+  updateClock();
+  setInterval(updateClock, 1000);
 });
 
 function startPolling() {
-    poll();
-    pollInterval = setInterval(poll, POLL_MS);
+  poll();
+  pollInterval = setInterval(poll, POLL_MS);
 }
 
 async function poll() {
-    try {
-        const resp = await fetch('/api/status');
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
-        const data = await resp.json();
-        updateDashboard(data);
-        setConnectionStatus(true);
-    } catch (e) {
-        setConnectionStatus(false);
-    }
+  try {
+    const resp = await fetch("/api/status");
+    if (!resp.ok) throw new Error("HTTP " + resp.status);
+    const data = await resp.json();
+    updateDashboard(data);
+    setConnectionStatus(true);
+  } catch (e) {
+    setConnectionStatus(false);
+  }
 }
 
 function updateDashboard(d) {
-    // State
-    const stateEl = document.getElementById('flight-state');
-    stateEl.textContent = d.state || 'IDLE';
-    stateEl.className = 'state ' + (d.state || 'idle').toLowerCase();
+  // State
+  const stateEl = document.getElementById("flight-state");
+  stateEl.textContent = d.state || "IDLE";
+  stateEl.className = "state " + (d.state || "idle").toLowerCase();
 
-    // Altitude
-    document.getElementById('alt-value').textContent =
-        (d.altitude != null ? d.altitude.toFixed(1) : '0') + ' m';
+  // Altitude
+  document.getElementById("alt-value").textContent =
+    (d.altitude != null ? d.altitude.toFixed(1) : "0") + " m";
 
-    // Vertical speed
-    const vs = d.vspeed || 0;
-    const vsStr = (vs >= 0 ? '+' : '') + vs.toFixed(1) + ' m/s';
-    document.getElementById('vs-value').textContent = vsStr;
+  // Vertical speed
+  const vs = d.vspeed || 0;
+  const vsStr = (vs >= 0 ? "+" : "") + vs.toFixed(1) + " m/s";
+  document.getElementById("vs-value").textContent = vsStr;
 
-    // Attitude
-    attitude.update(d.roll || 0, d.pitch || 0);
+  // Attitude
+  attitude.update(d.roll || 0, d.pitch || 0);
 
-    // Environment
-    document.getElementById('pressure').textContent =
-        (d.pressure != null ? d.pressure.toFixed(1) : '----') + ' hPa';
-    document.getElementById('temperature').textContent =
-        (d.temperature != null ? d.temperature.toFixed(1) : '--') + ' \u00B0C';
-    document.getElementById('humidity').textContent =
-        (d.humidity != null ? d.humidity.toFixed(0) : '--') + ' %';
+  // Environment
+  document.getElementById("pressure").textContent =
+    (d.pressure != null ? d.pressure.toFixed(1) : "----") + " hPa";
+  document.getElementById("temperature").textContent =
+    (d.temperature != null ? d.temperature.toFixed(1) : "--") + " \u00B0C";
+  document.getElementById("humidity").textContent =
+    (d.humidity != null ? d.humidity.toFixed(0) : "--") + " %";
 
-    // Battery
-    const pct = d.battery_pct || 0;
-    const fill = document.getElementById('battery-fill');
-    fill.style.width = pct + '%';
-    fill.className = 'bar-fill' +
-        (pct < 15 ? ' critical' : pct < 30 ? ' warning' : '');
-    document.getElementById('battery-pct').textContent = pct.toFixed(0) + '%';
-    document.getElementById('voltage').textContent =
-        (d.battery_v != null ? d.battery_v.toFixed(2) : '--') + ' V';
+  // Battery
+  const pct = d.battery_pct || 0;
+  const fill = document.getElementById("battery-fill");
+  fill.style.width = pct + "%";
+  fill.className =
+    "bar-fill" + (pct < 15 ? " critical" : pct < 30 ? " warning" : "");
+  document.getElementById("battery-pct").textContent = pct.toFixed(0) + "%";
+  document.getElementById("voltage").textContent =
+    (d.battery_v != null ? d.battery_v.toFixed(2) : "--") + " V";
 
-    // Logging
-    const logEl = document.getElementById('logging-status');
-    const isActive = d.state && d.state !== 'IDLE';
-    logEl.textContent = isActive ? 'ACTIVE' : 'INACTIVE';
-    logEl.className = 'value ' + (isActive ? 'status-active' : 'status-inactive');
+  // Logging
+  const logEl = document.getElementById("logging-status");
+  const isActive = d.state && d.state !== "IDLE";
+  logEl.textContent = isActive ? "ACTIVE" : "INACTIVE";
+  logEl.className = "value " + (isActive ? "status-active" : "status-inactive");
 
-    // Buttons
-    const isIdle = !d.state || d.state === 'IDLE';
-    const isArmed = d.state === 'ARMED';
-    document.getElementById('btn-arm').disabled = !isIdle;
-    document.getElementById('btn-disarm').disabled = !isArmed;
+  // Buttons
+  const isIdle = !d.state || d.state === "IDLE";
+  const isArmed = d.state === "ARMED";
+  document.getElementById("btn-arm").disabled = !isIdle;
+  document.getElementById("btn-disarm").disabled = !isArmed;
 }
 
 function setConnectionStatus(connected) {
-    const el = document.getElementById('connection-status');
-    el.textContent = connected ? 'Connected' : 'Disconnected';
-    el.className = 'conn-status ' + (connected ? 'connected' : 'disconnected');
+  const el = document.getElementById("connection-status");
+  el.textContent = connected ? "Connected" : "Disconnected";
+  el.className = "conn-status " + (connected ? "connected" : "disconnected");
 }
 
 function updateClock() {
-    const now = new Date();
-    const h = String(now.getHours()).padStart(2, '0');
-    const m = String(now.getMinutes()).padStart(2, '0');
-    const s = String(now.getSeconds()).padStart(2, '0');
-    document.getElementById('clock').textContent = h + ':' + m + ':' + s;
+  const now = new Date();
+  const h = String(now.getHours()).padStart(2, "0");
+  const m = String(now.getMinutes()).padStart(2, "0");
+  const s = String(now.getSeconds()).padStart(2, "0");
+  document.getElementById("clock").textContent = h + ":" + m + ":" + s;
 }
 
 function setupControls() {
-    document.getElementById('btn-arm').addEventListener('click', async function() {
-        await fetch('/api/arm', { method: 'POST' });
+  document
+    .getElementById("btn-arm")
+    .addEventListener("click", async function () {
+      await fetch("/api/arm", { method: "POST" });
     });
 
-    document.getElementById('btn-disarm').addEventListener('click', async function() {
-        await fetch('/api/disarm', { method: 'POST' });
+  document
+    .getElementById("btn-disarm")
+    .addEventListener("click", async function () {
+      await fetch("/api/disarm", { method: "POST" });
     });
 
-    document.getElementById('btn-config').addEventListener('click', openConfig);
-    document.getElementById('btn-config-close').addEventListener('click', closeConfig);
-    document.getElementById('btn-config-save').addEventListener('click', saveConfig);
+  document.getElementById("btn-config").addEventListener("click", openConfig);
+  document
+    .getElementById("btn-config-close")
+    .addEventListener("click", closeConfig);
+  document
+    .getElementById("btn-config-save")
+    .addEventListener("click", saveConfig);
 }
 
 async function openConfig() {
-    const resp = await fetch('/api/config');
-    const cfg = await resp.json();
-    const container = document.getElementById('config-fields');
+  const resp = await fetch("/api/config");
+  const cfg = await resp.json();
+  const container = document.getElementById("config-fields");
 
-    // Clear existing fields using safe DOM method
-    while (container.firstChild) {
-        container.removeChild(container.firstChild);
-    }
+  // Clear existing fields using safe DOM method
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
 
-    for (const [key, value] of Object.entries(cfg)) {
-        const row = document.createElement('div');
-        row.className = 'config-row';
+  for (const [key, value] of Object.entries(cfg)) {
+    const row = document.createElement("div");
+    row.className = "config-row";
 
-        const label = document.createElement('label');
-        label.textContent = key;
+    const label = document.createElement("label");
+    label.textContent = key;
 
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.dataset.key = key;
-        input.value = value;
+    const input = document.createElement("input");
+    input.type = "text";
+    input.dataset.key = key;
+    input.value = value;
 
-        row.appendChild(label);
-        row.appendChild(input);
-        container.appendChild(row);
-    }
+    row.appendChild(label);
+    row.appendChild(input);
+    container.appendChild(row);
+  }
 
-    document.getElementById('config-modal').classList.remove('hidden');
+  document.getElementById("config-modal").classList.remove("hidden");
 }
 
 function closeConfig() {
-    document.getElementById('config-modal').classList.add('hidden');
+  document.getElementById("config-modal").classList.add("hidden");
 }
 
 async function saveConfig() {
-    const inputs = document.querySelectorAll('#config-fields input');
-    const cfg = {};
-    inputs.forEach(function(input) {
-        const val = input.value;
-        const num = Number(val);
-        cfg[input.dataset.key] = isNaN(num) ? val : num;
-    });
+  const inputs = document.querySelectorAll("#config-fields input");
+  const cfg = {};
+  inputs.forEach(function (input) {
+    const val = input.value;
+    const num = Number(val);
+    cfg[input.dataset.key] = isNaN(num) ? val : num;
+  });
 
-    await fetch('/api/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(cfg),
-    });
+  await fetch("/api/config", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(cfg),
+  });
 
-    closeConfig();
+  closeConfig();
 }
 ```
 
@@ -2398,6 +2453,7 @@ git commit -m "feat: add dashboard JavaScript with polling, attitude indicator, 
 ## Task 12: Systemd Services and Deploy Script
 
 **Files:**
+
 - Create: `config/rocket-flight.service`
 - Create: `config/rocket-dashboard.service`
 - Create: `scripts/deploy.sh`
@@ -2511,6 +2567,7 @@ git commit -m "feat: add systemd services and manual deploy script"
 ## Task 13: Setup and README
 
 **Files:**
+
 - Create: `setup.py`
 - Create: `README.md`
 - Create: `tests/__init__.py`
@@ -2611,19 +2668,19 @@ git commit -m "feat: add setup.py, README, and test infrastructure"
 
 ## Summary
 
-| Task | Component | Tests |
-|------|-----------|-------|
-| 1 | Database schema + access layer | 6 |
-| 2 | Configuration manager | 5 |
-| 3 | Altitude calculator | 5 |
-| 4 | Sensor abstractions (BME280, BNO055, PowerBoost) | 6 |
-| 5 | Flight state machine | 12 |
-| 6 | Deployment controller (GPIO) | 5 |
-| 7 | Data logger | 4 |
-| 8 | Flight controller main loop | 4 |
-| 9 | Dashboard Flask backend + API | 8 |
-| 10 | Dashboard HTML + CSS | 1 |
-| 11 | Dashboard JavaScript (polling, gauges) | – |
-| 12 | Systemd services + deploy script | – |
-| 13 | Setup + README | – |
-| **Total** | | **56** |
+| Task      | Component                                        | Tests  |
+| --------- | ------------------------------------------------ | ------ |
+| 1         | Database schema + access layer                   | 6      |
+| 2         | Configuration manager                            | 5      |
+| 3         | Altitude calculator                              | 5      |
+| 4         | Sensor abstractions (BME280, BNO055, PowerBoost) | 6      |
+| 5         | Flight state machine                             | 12     |
+| 6         | Deployment controller (GPIO)                     | 5      |
+| 7         | Data logger                                      | 4      |
+| 8         | Flight controller main loop                      | 4      |
+| 9         | Dashboard Flask backend + API                    | 8      |
+| 10        | Dashboard HTML + CSS                             | 1      |
+| 11        | Dashboard JavaScript (polling, gauges)           | –      |
+| 12        | Systemd services + deploy script                 | –      |
+| 13        | Setup + README                                   | –      |
+| **Total** |                                                  | **56** |

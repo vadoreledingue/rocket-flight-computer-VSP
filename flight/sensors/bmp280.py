@@ -1,7 +1,7 @@
 from typing import Optional
 
 
-class BME280Sensor:
+class BMP280Sensor:
     """BMP280 sensor (pressure, temperature). No humidity sensor in BMP280."""
 
     def __init__(self) -> None:

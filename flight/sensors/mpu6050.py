@@ -2,7 +2,7 @@ from typing import Optional
 import math
 
 
-class BNO055Sensor:
+class MPU6050Sensor:
     """MPU-6050 sensor (accelerometer + 3-axis gyroscope).
 
     Provides raw accelerometer and gyroscope readings.
