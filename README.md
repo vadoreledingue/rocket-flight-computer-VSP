@@ -1,18 +1,18 @@
 # Rocket Flight Computer
 
-Flight computer software for a model rocket on Raspberry Pi Zero.
+Flight computer software for a model rocket on Raspberry Pi Zero 2W.
 
 ## Components
 
-- **Flight Controller** - Sensor readout, data logging, flight state machine, parachute deployment
+- **Flight Controller** - Sensor readout, data logging, flight state machine,
 - **Dashboard** - Web-based avionics cockpit UI for monitoring and configuration
 
 ## Hardware
 
-- Raspberry Pi Zero
-- Adafruit PowerBoost 500 + 3.7V LiPo
-- BME280 (pressure, temperature, humidity)
-- BNO055 (9-DOF orientation)
+- Raspberry Pi Zero 2W
+- Adafruit PowerBoost 1000 + 3.7V LiPo
+- BMP280 (pressure, temperature)
+- MPU-6050 (accelerometer with 3 axis gyroscop)
 
 ## Quick Start (Raspberry Pi)
 

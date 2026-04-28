@@ -112,10 +112,10 @@ def create_api_blueprint() -> Blueprint:
         # Scan I2C bus for connected sensors
         i2c_devices = _scan_i2c()
         sensors = [
-            {"name": "BME280", "addr": "0x76", "connected": "0x76" in i2c_devices,
-             "function": "Pressure/Temp/Humidity"},
-            {"name": "BNO055", "addr": "0x28", "connected": "0x28" in i2c_devices,
-             "function": "IMU (9-DOF)"},
+            {"name": "BMP280", "addr": "0x76", "connected": "0x76" in i2c_devices,
+             "function": "Pressure/Temperature"},
+            {"name": "MPU-6050", "addr": "0x68", "connected": "0x68" in i2c_devices,
+             "function": "IMU (Accel + Gyro)"},
         ]
         power = _get_power_status()
         return jsonify({"pins": pins, "sensors": sensors, "power": power})

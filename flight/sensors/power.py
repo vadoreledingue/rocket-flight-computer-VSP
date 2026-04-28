@@ -7,9 +7,13 @@ except (ImportError, RuntimeError):
 
 
 class PowerSensor:
-    """Reads battery status from PowerBoost 500 via LBO (Low Battery Output) pin.
+    """Reads battery status from PowerBoost 1000 via LBO (Low Battery Output) pin.
 
-    LBO is HIGH when battery is OK, goes LOW when battery drops below ~3.2V.
+    PowerBoost 1000C features:
+    - 3.7V LiPo input
+    - 5V USB output up to 1A continuous
+    - LBO pin goes LOW when battery drops below ~3.2V
+    - LED indicators for charging/power status
     """
 
     def __init__(self, lbo_pin: int = 4) -> None:
@@ -26,6 +30,8 @@ class PowerSensor:
     def read(self) -> Optional[dict]:
         try:
             low = self._is_low_battery()
+            # PowerBoost 1000 estimates based on LBO threshold (3.2V)
+            # Full LiPo: ~4.2V, Empty: ~3.0V
             return {
                 "battery_v": 3.2 if low else 3.8,
                 "battery_pct": 10.0 if low else 80.0,

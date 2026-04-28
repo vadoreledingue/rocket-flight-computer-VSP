@@ -2,7 +2,8 @@
 
 ## Project
 
-Model rocket flight computer running on Raspberry Pi Zero with two independent processes:
+Model rocket flight computer running on Raspberry Pi Zero 2W with two independent processes:
+
 - **Flight Controller** (`flight/`) – sensor readout, logging, flight logic, deployment
 - **Dashboard Server** (`dashboard/`) – Flask web UI in avionics glass cockpit style
 
@@ -21,6 +22,5 @@ Full specification: `docs/superpowers/specs/2026-04-16-rocket-flight-computer-de
 ## Conventions
 
 - Code comments in English
-- Responses in German
 - No auto-commits without confirmation
 - Manual deployment only (git push + SSH)

@@ -9,8 +9,8 @@ setup(
     ],
     extras_require={
         "pi": [
-            "adafruit-circuitpython-bme280",
-            "adafruit-circuitpython-bno055",
+            "adafruit-circuitpython-bmp280",
+            "adafruit-circuitpython-mpu6050",
             "RPi.GPIO",
         ],
     },
