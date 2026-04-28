@@ -1234,27 +1234,27 @@ def mock_sensors():
     }
     pwr = MagicMock()
     pwr.read.return_value = {"battery_v": 3.9, "battery_pct": 85.0}
-    return bme, bno, pwr
+    return bmp280, mpu6050, pwr
 
 def test_controller_initializes(db_path, mock_sensors):
-    bme, bno, pwr = mock_sensors
-    ctrl = FlightController(db_path=db_path, bme_sensor=bme,
-                            bno_sensor=bno, power_sensor=pwr)
+    bmp280, mpu6050, pwr = mock_sensors
+    ctrl = FlightController(db_path=db_path, bmp280_sensor=bmp280,
+                            mpu6050_sensor=mpu6050, power_sensor=pwr)
     assert ctrl.state_machine.state.value == "IDLE"
 
 def test_single_tick_reads_sensors(db_path, mock_sensors):
-    bme, bno, pwr = mock_sensors
-    ctrl = FlightController(db_path=db_path, bme_sensor=bme,
-                            bno_sensor=bno, power_sensor=pwr)
+    bmp280, mpu6050, pwr = mock_sensors
+    ctrl = FlightController(db_path=db_path, bmp280_sensor=bmp280,
+                            mpu6050_sensor=mpu6050, power_sensor=pwr)
     ctrl.tick()
-    bme.read.assert_called_once()
-    bno.read.assert_called_once()
+    bmp280.read.assert_called_once()
+    mpu6050.read.assert_called_once()
     pwr.read.assert_called_once()
 
 def test_tick_logs_data_when_armed(db_path, mock_sensors):
-    bme, bno, pwr = mock_sensors
-    ctrl = FlightController(db_path=db_path, bme_sensor=bme,
-                            bno_sensor=bno, power_sensor=pwr)
+    bmp280, mpu6050, pwr = mock_sensors
+    ctrl = FlightController(db_path=db_path, bmp280_sensor=bmp280,
+                            mpu6050_sensor=mpu6050, power_sensor=pwr)
     ctrl.state_machine.arm()
     ctrl.tick()
     rows = ctrl.db.get_latest_readings(count=1)
@@ -1262,10 +1262,10 @@ def test_tick_logs_data_when_armed(db_path, mock_sensors):
     assert rows[0]["state"] == "ARMED"
 
 def test_tick_handles_sensor_failure_gracefully(db_path, mock_sensors):
-    bme, bno, pwr = mock_sensors
-    bme.read.return_value = None  # sensor error
-    ctrl = FlightController(db_path=db_path, bme_sensor=bme,
-                            bno_sensor=bno, power_sensor=pwr)
+    bmp280, mpu6050, pwr = mock_sensors
+    bmp280.read.return_value = None  # sensor error
+    ctrl = FlightController(db_path=db_path, bmp280_sensor=bmp280,
+                            mpu6050_sensor=mpu6050, power_sensor=pwr)
     ctrl.state_machine.arm()
     ctrl.tick()  # should not crash
 ```
@@ -1294,8 +1294,8 @@ class FlightController:
     def __init__(
         self,
         db_path: str = "/opt/rocket/data/rocket.db",
-        bme_sensor=None,
-        bno_sensor=None,
+        bmp280_sensor=None,
+        mpu6050_sensor=None,
         power_sensor=None,
     ) -> None:
         self.db = FlightDB(db_path)
@@ -1310,8 +1310,8 @@ class FlightController:
         self.logger = FlightLogger(self.db)
         self.deployer = DeploymentController(pin=self.config.get("deploy_pin"))
 
-        self._bme = bme_sensor
-        self._bno = bno_sensor
+        self._bmp280 = bmp280_sensor
+        self._mpu6050 = mpu6050_sensor
         self._pwr = power_sensor
         self._running = False
         self._last_config_check = 0.0

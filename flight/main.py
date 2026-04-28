@@ -11,7 +11,7 @@ from flight.logger import FlightLogger
 
 class FlightController:
     def __init__(self, db_path: str = "/opt/rocket/data/rocket.db",
-                 bme_sensor=None, bno_sensor=None, power_sensor=None) -> None:
+                 bmp280_sensor=None, mpu6050_sensor=None, power_sensor=None) -> None:
         self.db = FlightDB(db_path)
         self.config = ConfigManager(self.db)
         self.state_machine = StateMachine(
@@ -20,8 +20,8 @@ class FlightController:
         )
         self.altitude_calc = AltitudeCalculator()
         self.logger = FlightLogger(self.db)
-        self._bme = bme_sensor
-        self._bno = bno_sensor
+        self._bmp280 = bmp280_sensor
+        self._mpu6050 = mpu6050_sensor
         self._pwr = power_sensor
         self._running = False
         self._last_config_check = 0.0
@@ -29,23 +29,23 @@ class FlightController:
         self._max_vspeed: float = 0.0
 
     def _init_sensors(self) -> None:
-        if self._bme is None:
+        if self._bmp280 is None:
             from flight.sensors.bmp280 import BMP280Sensor
-            self._bme = BMP280Sensor()
-        if self._bno is None:
+            self._bmp280 = BMP280Sensor()
+        if self._mpu6050 is None:
             from flight.sensors.mpu6050 import MPU6050Sensor
             try:
-                self._bno = MPU6050Sensor()
+                self._mpu6050 = MPU6050Sensor()
             except Exception:
-                self._bno = None
+                self._mpu6050 = None
         if self._pwr is None:
             from flight.sensors.power import PowerSensor
             self._pwr = PowerSensor()
 
     def tick(self) -> None:
         now = time.time()
-        bme_data = self._bme.read() if self._bme else None
-        bno_data = self._bno.read() if self._bno else None
+        bmp280_data = self._bmp280.read() if self._bmp280 else None
+        mpu6050_data = self._mpu6050.read() if self._mpu6050 else None
         pwr_data = self._pwr.read() if self._pwr else None
 
         data: dict = {
@@ -54,10 +54,10 @@ class FlightController:
             "accel_x": 0.0, "accel_y": 0.0, "accel_z": 0.0,
             "battery_v": 0.0, "battery_pct": 0.0,
         }
-        if bme_data:
-            data.update(bme_data)
-        if bno_data:
-            data.update(bno_data)
+        if bmp280_data:
+            data.update(bmp280_data)
+        if mpu6050_data:
+            data.update(mpu6050_data)
         if pwr_data:
             data.update(pwr_data)
 
