@@ -100,14 +100,12 @@ def create_api_blueprint() -> Blueprint:
 
     @bp.route("/api/hardware")
     def hardware_status():
-        cfg = current_app.config["config_manager"]
         pins = [
             {"pin": 2, "gpio": "5V", "label": "PowerBoost 5V", "type": "power"},
             {"pin": 3, "gpio": "SDA", "label": "I2C Data", "type": "i2c"},
             {"pin": 5, "gpio": "SCL", "label": "I2C Clock", "type": "i2c"},
             {"pin": 6, "gpio": "GND", "label": "PowerBoost GND", "type": "power"},
             {"pin": 7, "gpio": "GPIO4", "label": "Battery LBO", "type": "input"},
-            {"pin": 11, "gpio": "GPIO17", "label": "Deploy", "type": "output"},
         ]
         # Scan I2C bus for connected sensors
         i2c_devices = _scan_i2c()

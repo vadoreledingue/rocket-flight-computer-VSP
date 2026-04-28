@@ -5,11 +5,7 @@ from flight.database import FlightDB
 DEFAULTS: dict[str, Any] = {
     "sample_rate_idle": 1,
     "sample_rate_flight": 20,
-    "min_deploy_altitude": 30,
-    "min_flight_time": 2,
     "apogee_samples": 5,
-    "deploy_pin": 17,
-    "deploy_duration": 1.0,
     "landing_stable_time": 10,
 }
 

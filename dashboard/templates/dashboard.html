@@ -1,183 +1,186 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Rocket Flight Computer</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/cockpit.css') }}">
-</head>
-<body>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/cockpit.css') }}"
+    />
+  </head>
+  <body>
     <header id="top-bar">
-        <span class="title">ROCKET FLIGHT COMPUTER</span>
-        <span id="flight-state" class="state">IDLE</span>
-        <span id="clock" class="clock">00:00:00</span>
+      <span class="title">ROCKET FLIGHT COMPUTER</span>
+      <span id="flight-state" class="state">IDLE</span>
+      <span id="clock" class="clock">00:00:00</span>
     </header>
 
     <main id="instruments">
-        <section id="pin-layout" class="instrument-panel">
-            <h2>HARDWARE STATUS</h2>
-            <div id="pin-list" class="pin-list">
-                <div class="pin-row">
-                    <span class="pin-label">5V / GND</span>
-                    <span class="pin-status status-active">PWR</span>
-                </div>
-                <div class="pin-row">
-                    <span class="pin-label">I2C SDA/SCL</span>
-                    <span id="hw-i2c" class="pin-status">--</span>
-                </div>
-                <div class="pin-row">
-                    <span class="pin-label">GPIO4 LBO</span>
-                    <span id="hw-lbo" class="pin-status">--</span>
-                </div>
-                <div class="pin-row">
-                    <span class="pin-label">GPIO17 Deploy</span>
-                    <span id="hw-deploy" class="pin-status">--</span>
-                </div>
-            </div>
-            <div class="sensor-list">
-                <h3>I2C SENSORS</h3>
-                <div class="pin-row">
-                    <span class="pin-label">BME280 (0x76)</span>
-                    <span id="hw-bme280" class="pin-status">--</span>
-                </div>
-                <div class="pin-row">
-                    <span class="pin-label">BNO055 (0x28)</span>
-                    <span id="hw-bno055" class="pin-status">--</span>
-                </div>
-            </div>
-        </section>
+      <section id="pin-layout" class="instrument-panel">
+        <h2>HARDWARE STATUS</h2>
+        <div id="pin-list" class="pin-list">
+          <div class="pin-row">
+            <span class="pin-label">5V / GND</span>
+            <span class="pin-status status-active">PWR</span>
+          </div>
+          <div class="pin-row">
+            <span class="pin-label">I2C SDA/SCL</span>
+            <span id="hw-i2c" class="pin-status">--</span>
+          </div>
+          <div class="pin-row">
+            <span class="pin-label">GPIO4 LBO</span>
+            <span id="hw-lbo" class="pin-status">--</span>
+          </div>
+        </div>
+        <div class="sensor-list">
+          <h3>I2C SENSORS</h3>
+          <div class="pin-row">
+            <span class="pin-label">BME280 (0x76)</span>
+            <span id="hw-bme280" class="pin-status">--</span>
+          </div>
+          <div class="pin-row">
+            <span class="pin-label">BNO055 (0x28)</span>
+            <span id="hw-bno055" class="pin-status">--</span>
+          </div>
+        </div>
+      </section>
 
-        <section id="attitude-indicator" class="instrument-panel center-panel">
-            <h2>PRIMARY FLIGHT DISPLAY</h2>
-            <div id="pfd-container">
-                <div id="pfd-alt" class="pfd-readout pfd-left">
-                    <span class="pfd-label">ALT</span>
-                    <span id="alt-value" class="pfd-value">0 m</span>
-                </div>
-                <div id="attitude-container">
-                    <canvas id="attitude-canvas"></canvas>
-                </div>
-                <div id="pfd-vs" class="pfd-readout pfd-right">
-                    <span class="pfd-label">VS</span>
-                    <span id="vs-value" class="pfd-value">0.0 m/s</span>
-                </div>
-            </div>
-        </section>
+      <section id="attitude-indicator" class="instrument-panel center-panel">
+        <h2>PRIMARY FLIGHT DISPLAY</h2>
+        <div id="pfd-container">
+          <div id="pfd-alt" class="pfd-readout pfd-left">
+            <span class="pfd-label">ALT</span>
+            <span id="alt-value" class="pfd-value">0 m</span>
+          </div>
+          <div id="attitude-container">
+            <canvas id="attitude-canvas"></canvas>
+          </div>
+          <div id="pfd-vs" class="pfd-readout pfd-right">
+            <span class="pfd-label">VS</span>
+            <span id="vs-value" class="pfd-value">0.0 m/s</span>
+          </div>
+        </div>
+      </section>
 
-        <section id="imu-panel" class="instrument-panel">
-            <h2>IMU DATA</h2>
-            <div class="imu-readouts">
-                <div class="readout-row">
-                    <span class="label">Roll</span>
-                    <span id="imu-roll" class="value">--</span>
-                </div>
-                <div class="readout-row">
-                    <span class="label">Pitch</span>
-                    <span id="imu-pitch" class="value">--</span>
-                </div>
-                <div class="readout-row">
-                    <span class="label">Yaw</span>
-                    <span id="imu-yaw" class="value">--</span>
-                </div>
-                <div class="imu-separator"></div>
-                <div class="readout-row">
-                    <span class="label">Accel X</span>
-                    <span id="imu-ax" class="value">--</span>
-                </div>
-                <div class="readout-row">
-                    <span class="label">Accel Y</span>
-                    <span id="imu-ay" class="value">--</span>
-                </div>
-                <div class="readout-row">
-                    <span class="label">Accel Z</span>
-                    <span id="imu-az" class="value">--</span>
-                </div>
-            </div>
-        </section>
+      <section id="imu-panel" class="instrument-panel">
+        <h2>IMU DATA</h2>
+        <div class="imu-readouts">
+          <div class="readout-row">
+            <span class="label">Roll</span>
+            <span id="imu-roll" class="value">--</span>
+          </div>
+          <div class="readout-row">
+            <span class="label">Pitch</span>
+            <span id="imu-pitch" class="value">--</span>
+          </div>
+          <div class="readout-row">
+            <span class="label">Yaw</span>
+            <span id="imu-yaw" class="value">--</span>
+          </div>
+          <div class="imu-separator"></div>
+          <div class="readout-row">
+            <span class="label">Accel X</span>
+            <span id="imu-ax" class="value">--</span>
+          </div>
+          <div class="readout-row">
+            <span class="label">Accel Y</span>
+            <span id="imu-ay" class="value">--</span>
+          </div>
+          <div class="readout-row">
+            <span class="label">Accel Z</span>
+            <span id="imu-az" class="value">--</span>
+          </div>
+        </div>
+      </section>
     </main>
 
     <div id="readouts">
-        <section id="environment" class="readout-panel">
-            <h2>ENVIRONMENT</h2>
-            <div class="readout-row">
-                <span class="label">Pressure</span>
-                <span id="pressure" class="value">---- hPa</span>
-            </div>
-            <div class="readout-row">
-                <span class="label">Temperature</span>
-                <span id="temperature" class="value">-- &deg;C</span>
-            </div>
-            <div class="readout-row">
-                <span class="label">Humidity</span>
-                <span id="humidity" class="value">-- %</span>
-            </div>
-        </section>
+      <section id="environment" class="readout-panel">
+        <h2>ENVIRONMENT</h2>
+        <div class="readout-row">
+          <span class="label">Pressure</span>
+          <span id="pressure" class="value">---- hPa</span>
+        </div>
+        <div class="readout-row">
+          <span class="label">Temperature</span>
+          <span id="temperature" class="value">-- &deg;C</span>
+        </div>
+        <div class="readout-row">
+          <span class="label">Humidity</span>
+          <span id="humidity" class="value">-- %</span>
+        </div>
+      </section>
 
-        <section id="system" class="readout-panel">
-            <h2>SYSTEM</h2>
-            <div class="readout-row">
-                <span class="label">Supply 5V</span>
-                <span id="supply-status" class="value">--</span>
-            </div>
-            <div class="readout-row">
-                <span class="label">Battery</span>
-                <span id="battery-status" class="value">--</span>
-            </div>
-            <div class="readout-row">
-                <span class="label">Flight Time</span>
-                <span id="flight-time" class="value">00:00:00</span>
-            </div>
-            <div class="readout-row">
-                <span class="label">Logging</span>
-                <span id="logging-status" class="value status-inactive">INACTIVE</span>
-            </div>
-        </section>
+      <section id="system" class="readout-panel">
+        <h2>SYSTEM</h2>
+        <div class="readout-row">
+          <span class="label">Supply 5V</span>
+          <span id="supply-status" class="value">--</span>
+        </div>
+        <div class="readout-row">
+          <span class="label">Battery</span>
+          <span id="battery-status" class="value">--</span>
+        </div>
+        <div class="readout-row">
+          <span class="label">Flight Time</span>
+          <span id="flight-time" class="value">00:00:00</span>
+        </div>
+        <div class="readout-row">
+          <span class="label">Logging</span>
+          <span id="logging-status" class="value status-inactive"
+            >INACTIVE</span
+          >
+        </div>
+      </section>
     </div>
 
     <div id="battery-test-section">
-        <section id="battery-test" class="readout-panel">
-            <h2>BATTERY RUNTIME TEST</h2>
-            <div class="readout-row">
-                <span class="label">Status</span>
-                <span id="bat-test-state" class="value status-inactive">IDLE</span>
-            </div>
-            <div class="readout-row">
-                <span class="label">Runtime</span>
-                <span id="bat-test-runtime" class="value">--:--:--</span>
-            </div>
-            <div class="readout-row">
-                <span class="label">Low Battery at</span>
-                <span id="bat-test-low-at" class="value">--</span>
-            </div>
-            <div class="bat-test-controls">
-                <button id="btn-bat-start" class="ctrl-btn">START TEST</button>
-                <button id="btn-bat-stop" class="ctrl-btn" disabled>STOP TEST</button>
-                <button id="btn-bat-clear" class="ctrl-btn btn-danger">CLEAR HISTORY</button>
-            </div>
-            <div id="bat-test-history" class="bat-history"></div>
-        </section>
+      <section id="battery-test" class="readout-panel">
+        <h2>BATTERY RUNTIME TEST</h2>
+        <div class="readout-row">
+          <span class="label">Status</span>
+          <span id="bat-test-state" class="value status-inactive">IDLE</span>
+        </div>
+        <div class="readout-row">
+          <span class="label">Runtime</span>
+          <span id="bat-test-runtime" class="value">--:--:--</span>
+        </div>
+        <div class="readout-row">
+          <span class="label">Low Battery at</span>
+          <span id="bat-test-low-at" class="value">--</span>
+        </div>
+        <div class="bat-test-controls">
+          <button id="btn-bat-start" class="ctrl-btn">START TEST</button>
+          <button id="btn-bat-stop" class="ctrl-btn" disabled>STOP TEST</button>
+          <button id="btn-bat-clear" class="ctrl-btn btn-danger">
+            CLEAR HISTORY
+          </button>
+        </div>
+        <div id="bat-test-history" class="bat-history"></div>
+      </section>
     </div>
 
     <footer id="controls">
-        <button id="btn-arm" class="ctrl-btn">ARM</button>
-        <button id="btn-disarm" class="ctrl-btn" disabled>DISARM</button>
-        <button id="btn-calibrate" class="ctrl-btn">CALIBRATE</button>
-        <button id="btn-config" class="ctrl-btn">CONFIG</button>
-        <span id="connection-status" class="conn-status">Connecting...</span>
+      <button id="btn-arm" class="ctrl-btn">ARM</button>
+      <button id="btn-disarm" class="ctrl-btn" disabled>DISARM</button>
+      <button id="btn-calibrate" class="ctrl-btn">CALIBRATE</button>
+      <button id="btn-config" class="ctrl-btn">CONFIG</button>
+      <span id="connection-status" class="conn-status">Connecting...</span>
     </footer>
 
     <div id="config-modal" class="modal hidden">
-        <div class="modal-content">
-            <h2>CONFIGURATION</h2>
-            <div id="config-fields"></div>
-            <div class="modal-actions">
-                <button id="btn-config-save" class="ctrl-btn">SAVE</button>
-                <button id="btn-config-close" class="ctrl-btn">CLOSE</button>
-            </div>
+      <div class="modal-content">
+        <h2>CONFIGURATION</h2>
+        <div id="config-fields"></div>
+        <div class="modal-actions">
+          <button id="btn-config-save" class="ctrl-btn">SAVE</button>
+          <button id="btn-config-close" class="ctrl-btn">CLOSE</button>
         </div>
+      </div>
     </div>
 
     <script src="{{ url_for('static', filename='js/gauges.js') }}"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-</body>
+  </body>
 </html>

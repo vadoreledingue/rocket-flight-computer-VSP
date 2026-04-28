@@ -64,17 +64,17 @@ def test_api_config_get(client):
     resp = client.get("/api/config")
     assert resp.status_code == 200
     data = json.loads(resp.data)
-    assert "deploy_pin" in data
+    assert "sample_rate_idle" in data
 
 
 def test_api_config_post(client):
     resp = client.post("/api/config",
-                       data=json.dumps({"deploy_pin": 27}),
+                       data=json.dumps({"sample_rate_idle": 5}),
                        content_type="application/json")
     assert resp.status_code == 200
     resp2 = client.get("/api/config")
     data = json.loads(resp2.data)
-    assert data["deploy_pin"] == 27
+    assert data["sample_rate_idle"] == 5
 
 
 def test_api_history(seeded_client):

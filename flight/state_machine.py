@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
@@ -12,18 +11,11 @@ class FlightState(Enum):
     LANDED = "LANDED"
 
 
-@dataclass
-class UpdateResult:
-    deploy_triggered: bool = False
-
-
 class StateMachine:
-    def __init__(self, apogee_samples: int = 5, min_deploy_altitude: float = 30.0,
-                 min_flight_time: float = 2.0, landing_stable_time: float = 10.0) -> None:
+    def __init__(self, apogee_samples: int = 5,
+                 landing_stable_time: float = 10.0) -> None:
         self._state = FlightState.IDLE
         self._apogee_samples = apogee_samples
-        self._min_deploy_altitude = min_deploy_altitude
-        self._min_flight_time = min_flight_time
         self._landing_stable_time = landing_stable_time
         self._falling_count: int = 0
         self._max_altitude: float = 0.0
@@ -52,8 +44,7 @@ class StateMachine:
         if self._state == FlightState.ARMED:
             self._state = FlightState.IDLE
 
-    def update(self, reading: dict) -> UpdateResult:
-        result = UpdateResult()
+    def update(self, reading: dict) -> None:
         alt: float = reading["altitude"]
         vspeed: float = reading["vspeed"]
         ts: float = reading["timestamp"]
@@ -68,24 +59,19 @@ class StateMachine:
 
         elif self._state == FlightState.ASCENT:
             self._max_altitude = max(self._max_altitude, alt)
-            flight_time = ts - (self._armed_time or ts)
             # Count consecutive falling samples to confirm apogee
             if vspeed < 0:
                 self._falling_count += 1
             else:
                 self._falling_count = 0
-            if (self._falling_count >= self._apogee_samples
-                    and alt >= self._min_deploy_altitude
-                    and flight_time >= self._min_flight_time):
+            if self._falling_count >= self._apogee_samples:
                 self._state = FlightState.APOGEE
-                result.deploy_triggered = True
 
         elif self._state == FlightState.APOGEE:
             # Transition to descent and clear last altitude so the landing detector
             # starts fresh without comparing against an apogee-phase altitude
             self._state = FlightState.DESCENT
             self._last_altitude = None
-            return result
 
         elif self._state == FlightState.DESCENT:
             # Detect landing by stable altitude over landing_stable_time seconds.
@@ -102,4 +88,3 @@ class StateMachine:
                 self._stable_since = None
 
         self._last_altitude = alt
-        return result
