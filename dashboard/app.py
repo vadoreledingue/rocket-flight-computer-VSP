@@ -3,9 +3,20 @@ from dashboard.api import create_api_blueprint
 from flight.database import FlightDB
 from flight.config import ConfigManager
 from flight.state_machine import StateMachine
+import os
+from pathlib import Path
 
 
-def create_app(db_path: str = "/opt/rocket/data/rocket.db") -> Flask:
+def create_app(db_path: str | None = None) -> Flask:
+    """Create Flask app. Use `ROCKET_DB` env var or local `db/rocket.db` by default."""
+    if db_path is None:
+        db_path = os.environ.get(
+            "ROCKET_DB",
+            str(Path(__file__).resolve().parents[1] / "db" / "rocket.db"),
+        )
+    # Ensure parent directory exists so sqlite can create the file
+    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+
     app = Flask(__name__, static_folder="static", template_folder="templates")
     db = FlightDB(db_path)
     config = ConfigManager(db)

@@ -1,10 +1,14 @@
 let attitude;
 let pollInterval;
+let altitudeChart, accelChart;
+const CHART_UPDATE_MS = 1000;
 const POLL_MS = 500;
 
 document.addEventListener("DOMContentLoaded", function () {
   attitude = new AttitudeIndicator("attitude-canvas");
+  initCharts();
   startPolling();
+  setInterval(updateCharts, CHART_UPDATE_MS);
   setupControls();
   updateClock();
   setInterval(updateClock, 1000);
@@ -18,6 +22,100 @@ document.addEventListener("DOMContentLoaded", function () {
 function startPolling() {
   poll();
   pollInterval = setInterval(poll, POLL_MS);
+}
+
+function initCharts() {
+  try {
+    const altCtx = document.getElementById("chart-altitude").getContext("2d");
+    altitudeChart = new Chart(altCtx, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: "Altitude (m)",
+            data: [],
+            borderColor: "#00ccff",
+            backgroundColor: "rgba(0,204,255,0.1)",
+            tension: 0.2,
+            pointRadius: 0,
+          },
+        ],
+      },
+      options: {
+        maintainAspectRatio: false,
+        scales: { x: { display: true }, y: { display: true } },
+      },
+    });
+
+    const axCtx = document.getElementById("chart-accel").getContext("2d");
+    accelChart = new Chart(axCtx, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [
+          {
+            label: "Accel (g)",
+            data: [],
+            borderColor: "#ff9900",
+            backgroundColor: "rgba(255,153,0,0.08)",
+            tension: 0.2,
+            pointRadius: 0,
+          },
+        ],
+      },
+      options: {
+        maintainAspectRatio: false,
+        scales: { x: { display: true }, y: { display: true } },
+      },
+    });
+  } catch (e) {
+    // canvas or Chart.js not available
+  }
+}
+
+async function fetchHistory(seconds = 60) {
+  try {
+    const resp = await fetch(`/api/history?seconds=${seconds}`);
+    if (!resp.ok) return null;
+    const rows = await resp.json();
+    return rows;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function updateCharts() {
+  if (!altitudeChart || !accelChart) return;
+  const rows = await fetchHistory(60);
+  if (!rows) return;
+
+  const labels = [];
+  const altData = [];
+  const axData = [];
+  rows.forEach(function (r) {
+    const ts = r.timestamp || 0;
+    const tlabel = new Date(ts * 1000).toLocaleTimeString();
+    labels.push(tlabel);
+    altData.push(r.altitude != null ? r.altitude : null);
+    const ax = r.accel_x || 0;
+    const ay = r.accel_y || 0;
+    const az = r.accel_z || 0;
+    const mag = Math.sqrt(ax * ax + ay * ay + az * az);
+    axData.push(mag);
+  });
+
+  // Limit points to last 120
+  const maxPoints = 120;
+  const sliceFrom = Math.max(0, labels.length - maxPoints);
+
+  altitudeChart.data.labels = labels.slice(sliceFrom);
+  altitudeChart.data.datasets[0].data = altData.slice(sliceFrom);
+  altitudeChart.update("none");
+
+  accelChart.data.labels = labels.slice(sliceFrom);
+  accelChart.data.datasets[0].data = axData.slice(sliceFrom);
+  accelChart.update("none");
 }
 
 async function poll() {
