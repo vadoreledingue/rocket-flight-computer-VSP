@@ -17,8 +17,12 @@ if [ ! -d "$ROCKET_DIR" ]; then
 fi
 
 cd "$ROCKET_DIR"
-echo "[1/5] Pulling latest code..."
-git pull
+if [ -d .git ]; then
+    echo "[1/5] Pulling latest code..."
+    git pull
+else
+    echo "[1/5] (skipping git pull - not a Git repository)"
+fi
 
 if [ ! -d "$VENV_DIR" ]; then
     echo "[2/5] Creating virtual environment..."
