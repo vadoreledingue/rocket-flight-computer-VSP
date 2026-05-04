@@ -3,11 +3,18 @@
 # Manual deployment script - run on the Raspberry Pi via SSH.
 set -euo pipefail
 
-ROCKET_DIR="/opt/rocket"
+# Use ROCKET_DIR env var, or default to /opt/rocket, or use script's parent directory
+ROCKET_DIR="${ROCKET_DIR:-/opt/rocket}"
 VENV_DIR="${ROCKET_DIR}/venv"
 DATA_DIR="${ROCKET_DIR}/data"
 
 echo "=== Rocket Flight Computer - Deploy ==="
+
+if [ ! -d "$ROCKET_DIR" ]; then
+    echo "[0/5] Creating directory structure..."
+    sudo mkdir -p "$ROCKET_DIR"
+    sudo chown "$USER:$USER" "$ROCKET_DIR"
+fi
 
 cd "$ROCKET_DIR"
 echo "[1/5] Pulling latest code..."
