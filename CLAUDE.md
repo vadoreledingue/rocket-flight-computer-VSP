@@ -11,7 +11,7 @@ Model rocket flight computer running on Raspberry Pi Zero 2W with two independen
 
 - **MCU**: Raspberry Pi Zero 2W
 - **Power**: Adafruit PowerBoost 1000C + 3.7V LiPo
-- **Pressure/Temperature**: BMP280 (I2C 0x76) – in `flight/sensors/bmp280.py`
+- **Pressure/Temperature**: BMP280 (I2C 0x77) – in `flight/sensors/bmp280.py`
 - **IMU**: MPU-6050 (I2C 0x68) – in `flight/sensors/mpu6050.py`
 - **Battery Monitor**: GPIO pin 4 (LBO) – in `flight/sensors/power.py`
 

@@ -9,7 +9,7 @@ class BMP280Sensor:
         import busio
         import adafruit_bmp280
         i2c = busio.I2C(board.SCL, board.SDA)
-        self._device = adafruit_bmp280.Adafruit_BMP280_I2C(i2c, address=0x76)
+        self._device = adafruit_bmp280.Adafruit_BMP280_I2C(i2c, address=0x77)
         # Set sea level pressure for altitude calculation (typically 1013.25 hPa)
         self._device.sea_level_pressure = 1013.25
 

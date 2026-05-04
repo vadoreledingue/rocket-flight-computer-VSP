@@ -11,7 +11,7 @@ Flight computer software for a model rocket based on a Raspberry Pi Zero. The sy
 | Raspberry Pi Zero 2W      | Main computer                    | –              | Running            |
 | Adafruit PowerBoost 1000C | Power supply                     | GPIO/I2C       | Connected          |
 | 3.7V LiPo Battery         | Energy source                    | via PowerBoost | Connected          |
-| BMP280                    | Pressure, temperature            | I2C (0x76)     | Connected, working |
+| BMP280                    | Pressure, temperature            | I2C (0x77)     | Connected, working |
 | MPU-6050                  | Accelerometer + 3-axis gyroscope | I2C (0x68)     | Connected, working |
 
 ## Architecture
