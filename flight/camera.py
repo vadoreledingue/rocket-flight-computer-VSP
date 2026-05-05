@@ -82,20 +82,27 @@ class CameraStreamer:
     def _capture_loop(self) -> None:
         """Picamera2 capture loop with video recording and frame extraction."""
         try:
+            print("[CAMERA] Initializing camera...")
             self.camera = Picamera2()
+            print("[CAMERA] Camera initialized")
 
             config = self.camera.create_video_configuration(
                 main={"format": "RGB888", "size": (self.width, self.height)},
                 controls={"FrameRate": self.fps}
             )
             self.camera.configure(config)
+            print(f"[CAMERA] Configured: {self.width}x{self.height} @ {self.fps}fps")
 
             h264_encoder = H264Encoder(bitrate=5000000)
             file_output = FileOutput(str(self.video_file))
 
             self.camera.start(preview=None)
-            self.camera.start_recording(h264_encoder, file_output)
+            print("[CAMERA] Camera started")
 
+            self.camera.start_recording(h264_encoder, file_output)
+            print(f"[CAMERA] Recording to {self.video_file}")
+
+            frame_count = 0
             while self.is_running:
                 try:
                     stream = io.BytesIO()
@@ -106,14 +113,20 @@ class CameraStreamer:
                     with self._lock:
                         self.frame_file.write_bytes(jpeg_data)
 
+                    frame_count += 1
+                    if frame_count % 30 == 0:
+                        print(f"[CAMERA] Captured {frame_count} frames, last frame size: {len(jpeg_data)} bytes")
+
                     time.sleep(1.0 / self.fps)
 
                 except Exception as e:
-                    print(f"Frame capture error: {e}")
+                    print(f"[CAMERA] Frame capture error: {e}")
                     time.sleep(0.1)
 
         except Exception as e:
-            print(f"Camera initialization error: {e}")
+            print(f"[CAMERA] Camera initialization error: {e}")
+            import traceback
+            traceback.print_exc()
         finally:
             self.is_running = False
             if self.camera:
@@ -121,6 +134,7 @@ class CameraStreamer:
                     self.camera.stop_recording()
                     self.camera.stop()
                     self.camera.close()
+                    print("[CAMERA] Camera closed")
                 except Exception:
                     pass
                 self.camera = None
