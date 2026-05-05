@@ -10,7 +10,7 @@ from flight.logger import FlightLogger
 
 
 class FlightController:
-    def __init__(self, db_path: str = "/opt/rocket/data/rocket.db",
+    def __init__(self, db_path: str = "/opt/rocket/db/rocket.db",
                  bmp280_sensor=None, mpu6050_sensor=None, power_sensor=None) -> None:
         self.db = FlightDB(db_path)
         self.config = ConfigManager(self.db)
