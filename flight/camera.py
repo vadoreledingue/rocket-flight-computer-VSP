@@ -96,7 +96,7 @@ class CameraStreamer:
             h264_encoder = H264Encoder(bitrate=5000000)
             file_output = FileOutput(str(self.video_file))
 
-            self.camera.start(preview=None)
+            self.camera.start()
             print("[CAMERA] Camera started")
 
             self.camera.start_recording(h264_encoder, file_output)
