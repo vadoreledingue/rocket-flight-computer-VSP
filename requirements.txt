@@ -2,6 +2,7 @@
 Adafruit-Blinka
 adafruit-circuitpython-bmp280
 adafruit-circuitpython-mpu6050
+smbus2
 RPi.GPIO
 
 # Dashboard
