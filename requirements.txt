@@ -4,8 +4,6 @@ adafruit-circuitpython-bmp280
 adafruit-circuitpython-mpu6050
 smbus2
 RPi.GPIO
-picamera2
-Pillow
 
 # Dashboard
 flask

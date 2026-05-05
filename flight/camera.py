@@ -1,12 +1,12 @@
+import io
 import threading
 import time
 from pathlib import Path
 from datetime import datetime
-from io import BytesIO
 
 try:
     from picamera2 import Picamera2
-    from picamera2.encoders import JpegEncoder, H264Encoder
+    from picamera2.encoders import H264Encoder
     from picamera2.outputs import FileOutput
     PICAMERA2_AVAILABLE = True
 except ImportError:
@@ -33,7 +33,7 @@ class CameraStreamer:
         self._lock = threading.Lock()
 
         if not PICAMERA2_AVAILABLE:
-            print("Warning: picamera2 not available. Install with: pip install picamera2")
+            print("Warning: picamera2 not available. Install with: apt install -y python3-picamera2")
 
     def start(self, flight_id: str = None) -> None:
         """Start camera capture and recording."""
@@ -61,6 +61,7 @@ class CameraStreamer:
         if self.camera:
             try:
                 self.camera.stop_recording()
+                self.camera.stop()
                 self.camera.close()
             except Exception as e:
                 print(f"Error closing camera: {e}")
@@ -84,7 +85,7 @@ class CameraStreamer:
             self.camera = Picamera2()
 
             config = self.camera.create_video_configuration(
-                main={"size": (self.width, self.height), "format": "RGB888"},
+                main={"format": "RGB888", "size": (self.width, self.height)},
                 controls={"FrameRate": self.fps}
             )
             self.camera.configure(config)
@@ -92,26 +93,19 @@ class CameraStreamer:
             h264_encoder = H264Encoder(bitrate=5000000)
             file_output = FileOutput(str(self.video_file))
 
+            self.camera.start(preview=None)
             self.camera.start_recording(h264_encoder, file_output)
 
-            frame_count = 0
             while self.is_running:
                 try:
-                    request = self.camera.capture_request()
-                    buffer = request.make_buffer(0)
-                    array = request.make_array(0)
-                    request.release()
-
-                    from PIL import Image
-                    img = Image.fromarray(array)
-                    jpeg_buffer = BytesIO()
-                    img.save(jpeg_buffer, format='JPEG', quality=80)
-                    jpeg_data = jpeg_buffer.getvalue()
+                    stream = io.BytesIO()
+                    self.camera.capture_file(stream, format="jpeg")
+                    stream.seek(0)
+                    jpeg_data = stream.read()
 
                     with self._lock:
                         self.frame_file.write_bytes(jpeg_data)
 
-                    frame_count += 1
                     time.sleep(1.0 / self.fps)
 
                 except Exception as e:
@@ -125,8 +119,10 @@ class CameraStreamer:
             if self.camera:
                 try:
                     self.camera.stop_recording()
+                    self.camera.stop()
                     self.camera.close()
                 except Exception:
                     pass
                 self.camera = None
+
 
