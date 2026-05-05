@@ -3,6 +3,7 @@ let pollInterval;
 let altitudeChart, accelChart;
 const CHART_UPDATE_MS = 1000;
 const POLL_MS = 500;
+const API_BASE = `${window.location.hostname}:8080`;
 
 document.addEventListener("DOMContentLoaded", function () {
   attitude = new AttitudeIndicator("attitude-canvas");
@@ -17,7 +18,15 @@ document.addEventListener("DOMContentLoaded", function () {
   loadBatteryHistory();
   pollHardware();
   setInterval(pollHardware, 5000);
+  updateCameraStreamUrl();
 });
+
+function updateCameraStreamUrl() {
+  const cameraStream = document.getElementById("camera-stream");
+  if (cameraStream) {
+    cameraStream.src = `http://${API_BASE}/api/camera/stream`;
+  }
+}
 
 function startPolling() {
   poll();
@@ -76,7 +85,7 @@ function initCharts() {
 
 async function fetchHistory(seconds = 60) {
   try {
-    const resp = await fetch(`/api/history?seconds=${seconds}`);
+    const resp = await fetch(`http://${API_BASE}/api/history?seconds=${seconds}`);
     if (!resp.ok) return null;
     const rows = await resp.json();
     return rows;
@@ -120,7 +129,7 @@ async function updateCharts() {
 
 async function poll() {
   try {
-    const resp = await fetch("/api/status");
+    const resp = await fetch(`http://${API_BASE}/api/status`);
     if (!resp.ok) throw new Error("HTTP " + resp.status);
     const data = await resp.json();
     updateDashboard(data);
@@ -236,17 +245,17 @@ function setupControls() {
   document
     .getElementById("btn-arm")
     .addEventListener("click", async function () {
-      await fetch("/api/arm", { method: "POST" });
+      await fetch(`http://${API_BASE}/api/arm`, { method: "POST" });
     });
   document
     .getElementById("btn-disarm")
     .addEventListener("click", async function () {
-      await fetch("/api/disarm", { method: "POST" });
+      await fetch(`http://${API_BASE}/api/disarm`, { method: "POST" });
     });
   document
     .getElementById("btn-calibrate")
     .addEventListener("click", async function () {
-      await fetch("/api/calibrate", { method: "POST" });
+      await fetch(`http://${API_BASE}/api/calibrate`, { method: "POST" });
     });
   document.getElementById("btn-config").addEventListener("click", openConfig);
   document
@@ -258,21 +267,21 @@ function setupControls() {
   document
     .getElementById("btn-bat-start")
     .addEventListener("click", async function () {
-      await fetch("/api/battery-test/start", { method: "POST" });
+      await fetch(`http://${API_BASE}/api/battery-test/start`, { method: "POST" });
       pollBatteryTest();
       loadBatteryHistory();
     });
   document
     .getElementById("btn-bat-stop")
     .addEventListener("click", async function () {
-      await fetch("/api/battery-test/stop", { method: "POST" });
+      await fetch(`http://${API_BASE}/api/battery-test/stop`, { method: "POST" });
       pollBatteryTest();
       loadBatteryHistory();
     });
   document
     .getElementById("btn-bat-clear")
     .addEventListener("click", async function () {
-      await fetch("/api/battery-tests/clear", { method: "POST" });
+      await fetch(`http://${API_BASE}/api/battery-tests/clear`, { method: "POST" });
       loadBatteryHistory();
     });
 }
@@ -281,7 +290,7 @@ function setupControls() {
 
 async function pollHardware() {
   try {
-    var resp = await fetch("/api/hardware");
+    var resp = await fetch(`http://${API_BASE}/api/hardware`);
     var hw = await resp.json();
 
     // I2C bus status
@@ -332,7 +341,7 @@ async function pollHardware() {
 
 async function pollBatteryTest() {
   try {
-    var resp = await fetch("/api/battery-test");
+    var resp = await fetch(`http://${API_BASE}/api/battery-test`);
     var test = await resp.json();
     var stateEl = document.getElementById("bat-test-state");
     var runtimeEl = document.getElementById("bat-test-runtime");
@@ -383,7 +392,7 @@ function formatDuration(seconds) {
 
 async function loadBatteryHistory() {
   try {
-    var resp = await fetch("/api/battery-tests");
+    var resp = await fetch(`http://${API_BASE}/api/battery-tests`);
     var tests = await resp.json();
     var container = document.getElementById("bat-test-history");
     while (container.firstChild) {
@@ -439,7 +448,7 @@ async function loadBatteryHistory() {
 }
 
 async function openConfig() {
-  var resp = await fetch("/api/config");
+  var resp = await fetch(`http://${API_BASE}/api/config`);
   var cfg = await resp.json();
   var container = document.getElementById("config-fields");
   while (container.firstChild) {
@@ -474,7 +483,7 @@ async function saveConfig() {
     var num = Number(val);
     cfg[input.dataset.key] = isNaN(num) ? val : num;
   });
-  await fetch("/api/config", {
+  await fetch(`http://${API_BASE}/api/config`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(cfg),
