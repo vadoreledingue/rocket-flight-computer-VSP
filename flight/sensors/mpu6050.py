@@ -91,7 +91,8 @@ class MPU6050Sensor:
                 gyro_y = gy / 131.0
                 gyro_z = gz / 131.0
 
-                pitch, roll = self._compute_pitch_roll((accel_x, accel_y, accel_z))
+                pitch, roll = self._compute_pitch_roll(
+                    (accel_x, accel_y, accel_z))
 
                 return {
                     "yaw": 0.0,
