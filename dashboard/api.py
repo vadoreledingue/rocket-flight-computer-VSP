@@ -112,7 +112,7 @@ def create_api_blueprint() -> Blueprint:
         sensors = [
             {"name": "BMP280", "addr": "0x77", "connected": "0x77" in i2c_devices,
              "function": "Pressure/Temperature"},
-            {"name": "MPU-6050", "addr": "0x68", "connected": "0x68" in i2c_devices,
+            {"name": "MPU6050", "addr": "0x68", "connected": "0x68" in i2c_devices,
              "function": "IMU (Accel + Gyro)"},
         ]
         power = _get_power_status()
