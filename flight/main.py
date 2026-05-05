@@ -93,10 +93,13 @@ class FlightController:
 
         # Handle camera state transitions
         if self._previous_state != current_state:
+            print(f"[STATE] {self._previous_state} → {current_state}")
             if current_state == FlightState.ARMED:
                 flight_id = self.logger.flight_id or f"{int(now)}"
+                print(f"[CAMERA] Starting camera (flight_id={flight_id})")
                 self.camera.start(flight_id)
             elif current_state == FlightState.LANDED:
+                print(f"[CAMERA] Stopping camera")
                 self.camera.stop()
             self._previous_state = current_state
 
