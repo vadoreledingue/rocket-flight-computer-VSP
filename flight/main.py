@@ -49,7 +49,7 @@ class FlightController:
         pwr_data = self._pwr.read() if self._pwr else None
 
         data: dict = {
-            "pressure": 0.0, "temperature": 0.0, "humidity": 0.0,
+            "pressure": 0.0, "temperature": 0.0,
             "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
             "accel_x": 0.0, "accel_y": 0.0, "accel_z": 0.0,
             "battery_v": 0.0, "battery_pct": 0.0,

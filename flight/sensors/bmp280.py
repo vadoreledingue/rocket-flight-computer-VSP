@@ -2,7 +2,7 @@ from typing import Optional
 
 
 class BMP280Sensor:
-    """BMP280 sensor (pressure, temperature). No humidity sensor in BMP280."""
+    """BMP280 sensor (pressure, temperature)."""
 
     def __init__(self) -> None:
         import board
@@ -18,7 +18,6 @@ class BMP280Sensor:
             return {
                 "pressure": self._device.pressure,
                 "temperature": self._device.temperature,
-                "humidity": None,  # BMP280 doesn't measure humidity
             }
         except (OSError, ValueError):
             return None

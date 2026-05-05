@@ -17,7 +17,7 @@ class FlightLogger:
             timestamp=timestamp,
             pressure=sensor_data.get("pressure", 0.0),
             temperature=sensor_data.get("temperature", 0.0),
-            humidity=sensor_data.get("humidity", 0.0),
+            humidity=sensor_data.get("humidity"),
             altitude=sensor_data.get("altitude", 0.0),
             vspeed=sensor_data.get("vspeed", 0.0),
             roll=sensor_data.get("roll", 0.0),
@@ -33,5 +33,6 @@ class FlightLogger:
 
     def end_flight(self, max_altitude: float, max_vspeed: float, duration: float) -> None:
         if self.flight_id is not None:
-            self._db.end_flight(self.flight_id, max_altitude, max_vspeed, duration)
+            self._db.end_flight(
+                self.flight_id, max_altitude, max_vspeed, duration)
             self.flight_id = None

@@ -150,8 +150,6 @@ function updateDashboard(d) {
     (d.pressure != null ? d.pressure.toFixed(1) : "----") + " hPa";
   document.getElementById("temperature").textContent =
     (d.temperature != null ? d.temperature.toFixed(1) : "--") + " \u00B0C";
-  document.getElementById("humidity").textContent =
-    (d.humidity != null ? d.humidity.toFixed(0) : "--") + " %";
 
   // Battery status
   var batEl = document.getElementById("battery-status");
