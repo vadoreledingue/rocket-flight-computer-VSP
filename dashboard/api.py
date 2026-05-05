@@ -134,7 +134,8 @@ def create_api_blueprint() -> Blueprint:
                             last_frame = frame
                             yield (b'--frame\r\n'
                                    b'Content-Type: image/jpeg\r\n'
-                                   b'Content-Length: ' + str(len(frame)).encode() + b'\r\n\r\n'
+                                   b'Content-Length: ' +
+                                   str(len(frame)).encode() + b'\r\n\r\n'
                                    + frame + b'\r\n')
                 except Exception:
                     pass

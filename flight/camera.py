@@ -86,7 +86,8 @@ class CameraStreamer:
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
-                preexec_fn=lambda: signal.signal(signal.SIGTERM, signal.SIG_DFL)
+                preexec_fn=lambda: signal.signal(
+                    signal.SIGTERM, signal.SIG_DFL)
             )
 
             frame_extract_thread = threading.Thread(
