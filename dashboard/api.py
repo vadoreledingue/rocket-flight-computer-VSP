@@ -1,6 +1,7 @@
 import subprocess
 import time
-from flask import Blueprint, request, jsonify, current_app
+from pathlib import Path
+from flask import Blueprint, request, jsonify, current_app, Response
 
 
 def create_api_blueprint() -> Blueprint:
@@ -117,6 +118,29 @@ def create_api_blueprint() -> Blueprint:
         ]
         power = _get_power_status()
         return jsonify({"pins": pins, "sensors": sensors, "power": power})
+
+    @bp.route("/api/camera/stream")
+    def camera_stream():
+        """MJPEG stream from flight controller camera."""
+        frame_file = Path("/tmp/rocket_camera_frame.jpg")
+
+        def generate():
+            last_frame = None
+            while True:
+                try:
+                    if frame_file.exists():
+                        frame = frame_file.read_bytes()
+                        if frame and frame != last_frame:
+                            last_frame = frame
+                            yield (b'--frame\r\n'
+                                   b'Content-Type: image/jpeg\r\n'
+                                   b'Content-Length: ' + str(len(frame)).encode() + b'\r\n\r\n'
+                                   + frame + b'\r\n')
+                except Exception:
+                    pass
+                time.sleep(0.01)
+
+        return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
     return bp
 

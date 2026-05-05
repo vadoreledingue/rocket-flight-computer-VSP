@@ -199,6 +199,23 @@ function updateDashboard(d) {
   var isArmed = d.state === "ARMED";
   document.getElementById("btn-arm").disabled = !isIdle;
   document.getElementById("btn-disarm").disabled = !isArmed;
+
+  // Camera panel visibility: show only when not idle
+  var cameraPanel = document.getElementById("camera-panel");
+  var cameraStream = document.getElementById("camera-stream");
+  var cameraLoading = document.getElementById("camera-loading");
+  if (!isIdle && d.state !== "ARMED") {
+    cameraPanel.style.display = "block";
+    cameraStream.style.display = "block";
+    cameraLoading.style.display = "none";
+  } else if (d.state === "ARMED") {
+    cameraPanel.style.display = "block";
+    cameraStream.style.display = "block";
+    cameraLoading.style.display = "none";
+  } else {
+    cameraPanel.style.display = "none";
+    cameraStream.style.display = "none";
+  }
 }
 
 function setConnectionStatus(connected) {

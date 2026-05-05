@@ -7,6 +7,7 @@ from flight.config import ConfigManager
 from flight.state_machine import FlightState, StateMachine
 from flight.altitude import AltitudeCalculator
 from flight.logger import FlightLogger
+from flight.camera import CameraStreamer
 
 
 class FlightController:
@@ -20,6 +21,7 @@ class FlightController:
         )
         self.altitude_calc = AltitudeCalculator()
         self.logger = FlightLogger(self.db)
+        self.camera = CameraStreamer()
         self._bmp280 = bmp280_sensor
         self._mpu6050 = mpu6050_sensor
         self._pwr = power_sensor
@@ -27,6 +29,7 @@ class FlightController:
         self._last_config_check = 0.0
         self._flight_start_time: Optional[float] = None
         self._max_vspeed: float = 0.0
+        self._previous_state: Optional[FlightState] = None
 
     def _init_sensors(self) -> None:
         if self._bmp280 is None:
@@ -73,6 +76,7 @@ class FlightController:
             self.state_machine.update(reading)
 
         current_state = self.state_machine.state
+
         if current_state == FlightState.ARMED and self.logger.flight_id is None:
             self.logger.start_flight()
             self.altitude_calc.set_baseline(
@@ -86,6 +90,15 @@ class FlightController:
                                    max_vspeed=self._max_vspeed, duration=duration)
 
         self.logger.log(data, state=current_state.value, timestamp=now)
+
+        # Handle camera state transitions
+        if self._previous_state != current_state:
+            if current_state == FlightState.ARMED:
+                flight_id = self.logger.flight_id or f"{int(now)}"
+                self.camera.start(flight_id)
+            elif current_state == FlightState.LANDED:
+                self.camera.stop()
+            self._previous_state = current_state
 
         if now - self._last_config_check >= 1.0:
             self.config.reload()
@@ -125,6 +138,7 @@ class FlightController:
                 print(f"Tick error: {e}", file=sys.stderr)
             rate = self.get_sample_rate()
             time.sleep(1.0 / rate)
+        self.camera.stop()
         self.db.close()
 
 
