@@ -128,6 +128,7 @@ def create_api_blueprint() -> Blueprint:
         def generate():
             last_frame = None
             frame_count = 0
+            no_update_count = 0
             while True:
                 try:
                     if frame_file.exists():
@@ -135,17 +136,25 @@ def create_api_blueprint() -> Blueprint:
                         if frame and frame != last_frame:
                             last_frame = frame
                             frame_count += 1
+                            no_update_count = 0
                             if frame_count % 10 == 0:
                                 print(f"[STREAM] Sent {frame_count} frames")
                             yield (b'--frame\r\n'
                                    b'Content-Type: image/jpeg\r\n'
                                    b'Content-Length: ' + str(len(frame)).encode() + b'\r\n\r\n'
                                    + frame + b'\r\n')
+                        else:
+                            no_update_count += 1
+                            if no_update_count >= 50:
+                                print(f"[STREAM] No frame update for 5s, stream timeout")
+                                break
                     else:
                         print(f"[STREAM] Frame file not found: {frame_file}")
+                        break
                 except Exception as e:
                     print(f"[STREAM] Error: {e}")
-                time.sleep(0.01)
+                    break
+                time.sleep(0.1)
 
         return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 

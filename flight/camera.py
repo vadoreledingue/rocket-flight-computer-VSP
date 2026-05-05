@@ -8,6 +8,7 @@ try:
     from picamera2 import Picamera2
     from picamera2.encoders import H264Encoder
     from picamera2.outputs import FileOutput
+    from PIL import Image
     PICAMERA2_AVAILABLE = True
 except ImportError:
     PICAMERA2_AVAILABLE = False
@@ -105,10 +106,12 @@ class CameraStreamer:
             frame_count = 0
             while self.is_running:
                 try:
+                    array = self.camera.capture_array()
+                    image = Image.fromarray(array)
+
                     stream = io.BytesIO()
-                    self.camera.capture_file(stream, format="jpeg")
-                    stream.seek(0)
-                    jpeg_data = stream.read()
+                    image.save(stream, format="JPEG", quality=80)
+                    jpeg_data = stream.getvalue()
 
                     with self._lock:
                         self.frame_file.write_bytes(jpeg_data)
