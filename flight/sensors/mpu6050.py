@@ -81,12 +81,11 @@ class MPU6050Sensor:
                 gy = read_word(0x45)
                 gz = read_word(0x47)
 
-                # Convert raw values to physical units
+                # Convert raw values to physical units.
                 # Assuming default FS: accel +/-2g -> 16384 LSB/g; gyro +/-250 dps -> 131 LSB/(deg/s)
-                g_to_ms2 = 9.80665
-                accel_x = (ax / 16384.0) * g_to_ms2
-                accel_y = (ay / 16384.0) * g_to_ms2
-                accel_z = (az / 16384.0) * g_to_ms2
+                accel_x = ax / 16384.0
+                accel_y = ay / 16384.0
+                accel_z = az / 16384.0
                 gyro_x = gx / 131.0
                 gyro_y = gy / 131.0
                 gyro_z = gz / 131.0

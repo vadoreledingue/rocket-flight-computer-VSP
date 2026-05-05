@@ -170,7 +170,13 @@ function updateDashboard(d) {
   logEl.className = "value " + (isActive ? "status-active" : "status-inactive");
 
   // IMU data
-  var hasImu = d.roll != null && (d.roll !== 0 || d.pitch !== 0 || d.yaw !== 0);
+  var hasImu =
+    d.roll != null ||
+    d.pitch != null ||
+    d.yaw != null ||
+    d.accel_x != null ||
+    d.accel_y != null ||
+    d.accel_z != null;
   document.getElementById("imu-roll").textContent = hasImu
     ? d.roll.toFixed(1) + "\u00B0"
     : "--";
