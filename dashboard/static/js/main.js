@@ -19,36 +19,21 @@ document.addEventListener("DOMContentLoaded", function () {
   loadBatteryHistory();
   pollHardware();
   setInterval(pollHardware, 5000);
-  setupCameraStream();
 });
 
-function setupCameraStream() {
-  const cameraImg = document.getElementById("camera-stream");
-  if (cameraImg) {
-    cameraImg.src = API_BASE + "/api/camera/stream";
-    console.log("[CAMERA] MJPEG stream URL:", cameraImg.src);
-  }
-}
-
 function startCameraDisplay() {
-  const cameraPanel = document.getElementById("camera-panel");
-  const cameraStream = document.getElementById("camera-stream");
-  const cameraLoading = document.getElementById("camera-loading");
-  if (cameraPanel && cameraStream && cameraLoading) {
-    cameraPanel.style.display = "block";
-    cameraStream.style.display = "block";
-    cameraLoading.style.display = "none";
-    console.log("[CAMERA] Display started");
+  const cameraImg = document.getElementById("camera-stream");
+  if (cameraImg && !cameraImg.src) {
+    cameraImg.src = API_BASE + "/api/camera/stream";
+    console.log("[CAMERA] Started streaming:", cameraImg.src);
   }
 }
 
 function stopCameraDisplay() {
-  const cameraPanel = document.getElementById("camera-panel");
-  const cameraStream = document.getElementById("camera-stream");
-  if (cameraPanel && cameraStream) {
-    cameraPanel.style.display = "none";
-    cameraStream.style.display = "none";
-    console.log("[CAMERA] Display stopped");
+  const cameraImg = document.getElementById("camera-stream");
+  if (cameraImg) {
+    cameraImg.src = "";
+    console.log("[CAMERA] Stopped streaming");
   }
 }
 
