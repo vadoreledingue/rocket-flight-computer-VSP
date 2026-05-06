@@ -9,9 +9,13 @@ setup(
     ],
     extras_require={
         "pi": [
+            "Adafruit-Blinka",
             "adafruit-circuitpython-bmp280",
             "adafruit-circuitpython-mpu6050",
+            "smbus2",
             "RPi.GPIO",
+            "picamera2",
+            "Pillow",
         ],
     },
     entry_points={
