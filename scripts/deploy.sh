@@ -7,6 +7,8 @@ set -euo pipefail
 ROCKET_DIR="${ROCKET_DIR:-/opt/rocket}"
 VENV_DIR="${ROCKET_DIR}/venv"
 DATA_DIR="${ROCKET_DIR}/data"
+VIDEO_DIR="${DATA_DIR}/videos"
+SERVICE_USER="${ROCKET_SERVICE_USER:-vld}"
 
 echo "=== Rocket Flight Computer - Deploy ==="
 
@@ -34,7 +36,9 @@ fi
 echo "[3/5] Installing dependencies..."
 "$VENV_DIR/bin/pip" install -r requirements.txt --quiet
 
-mkdir -p "$DATA_DIR"
+echo "[3.5/5] Preparing writable data directories..."
+sudo mkdir -p "$DATA_DIR" "$VIDEO_DIR"
+sudo chown -R "$SERVICE_USER:$SERVICE_USER" "$DATA_DIR"
 
 echo "[4/5] Updating systemd services..."
 sudo cp config/rocket-flight.service /etc/systemd/system/

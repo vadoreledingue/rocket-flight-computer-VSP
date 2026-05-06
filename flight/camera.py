@@ -13,7 +13,8 @@ except ImportError:
     PICAMERA2_AVAILABLE = False
 
 
-DEFAULT_VIDEO_DIR = "/opt/rocket/videos"
+DEFAULT_VIDEO_DIR = "/opt/rocket/data/videos"
+FALLBACK_VIDEO_DIR = "/tmp/rocket/videos"
 DEFAULT_FRAME_FILE = "/dev/shm/rocket_camera_frame.jpg"
 
 
@@ -28,8 +29,8 @@ class CameraStreamer:
         self.height = height
         self.fps = fps
         self.stream_fps = max(1, min(stream_fps, fps))
-        self.video_dir = Path(video_dir)
-        self.video_dir.mkdir(parents=True, exist_ok=True)
+        configured_video_dir = os.environ.get("ROCKET_VIDEO_DIR", video_dir)
+        self.video_dir = self._prepare_video_dir(configured_video_dir)
         self.frame_file = Path(frame_file)
 
         self.is_running = False
@@ -191,3 +192,23 @@ class CameraStreamer:
                 f"{self.frame_file.stem}.tmp{self.frame_file.suffix}"
             )
         return self.frame_file.with_name(f"{self.frame_file.name}.tmp.jpg")
+
+    def _prepare_video_dir(self, preferred_dir: str) -> Path:
+        candidates = [Path(preferred_dir), Path(FALLBACK_VIDEO_DIR)]
+        last_error = None
+
+        for candidate in candidates:
+            try:
+                candidate.mkdir(parents=True, exist_ok=True)
+                probe = candidate / ".write_test"
+                probe.write_text("ok", encoding="ascii")
+                probe.unlink(missing_ok=True)
+                print(f"[CAMERA] Video directory ready: {candidate}")
+                return candidate
+            except OSError as e:
+                last_error = e
+                print(f"[CAMERA] Video directory not writable: {candidate} ({e})")
+
+        raise PermissionError(
+            f"No writable video directory available (last error: {last_error})"
+        )
