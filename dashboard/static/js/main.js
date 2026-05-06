@@ -1,12 +1,10 @@
 let attitude;
 let pollInterval;
 let altitudeChart, accelChart;
-let cameraRefreshInterval;
-let cameraRefreshActive = false;
 const CHART_UPDATE_MS = 1000;
 const POLL_MS = 500;
-const CAMERA_REFRESH_MS = 50;
-const API_BASE = `${window.location.hostname}:8080`;
+
+const API_BASE = window.location.protocol + "//" + window.location.host;
 
 document.addEventListener("DOMContentLoaded", function () {
   attitude = new AttitudeIndicator("attitude-canvas");
@@ -21,29 +19,36 @@ document.addEventListener("DOMContentLoaded", function () {
   loadBatteryHistory();
   pollHardware();
   setInterval(pollHardware, 5000);
+  setupCameraStream();
 });
 
-function updateCameraFrame() {
+function setupCameraStream() {
   const cameraImg = document.getElementById("camera-stream");
   if (cameraImg) {
-    cameraImg.src = `http://${API_BASE}/api/camera/frame?t=${Date.now()}`;
+    cameraImg.src = API_BASE + "/api/camera/stream";
+    console.log("[CAMERA] MJPEG stream URL:", cameraImg.src);
   }
 }
 
-function startCameraRefresh() {
-  if (cameraRefreshActive) return;
-  cameraRefreshActive = true;
-  console.log("[CAMERA] Starting frame refresh (20fps)");
-  cameraRefreshInterval = setInterval(updateCameraFrame, CAMERA_REFRESH_MS);
-  updateCameraFrame();
+function startCameraDisplay() {
+  const cameraPanel = document.getElementById("camera-panel");
+  const cameraStream = document.getElementById("camera-stream");
+  const cameraLoading = document.getElementById("camera-loading");
+  if (cameraPanel && cameraStream && cameraLoading) {
+    cameraPanel.style.display = "block";
+    cameraStream.style.display = "block";
+    cameraLoading.style.display = "none";
+    console.log("[CAMERA] Display started");
+  }
 }
 
-function stopCameraRefresh() {
-  cameraRefreshActive = false;
-  if (cameraRefreshInterval) {
-    clearInterval(cameraRefreshInterval);
-    cameraRefreshInterval = null;
-    console.log("[CAMERA] Stopping frame refresh");
+function stopCameraDisplay() {
+  const cameraPanel = document.getElementById("camera-panel");
+  const cameraStream = document.getElementById("camera-stream");
+  if (cameraPanel && cameraStream) {
+    cameraPanel.style.display = "none";
+    cameraStream.style.display = "none";
+    console.log("[CAMERA] Display stopped");
   }
 }
 
@@ -106,7 +111,7 @@ function initCharts() {
 async function fetchHistory(seconds = 60) {
   try {
     const resp = await fetch(
-      `http://${API_BASE}/api/history?seconds=${seconds}`,
+      API_BASE + "/api/history?seconds=" + seconds,
     );
     if (!resp.ok) return null;
     const rows = await resp.json();
@@ -151,7 +156,7 @@ async function updateCharts() {
 
 async function poll() {
   try {
-    const resp = await fetch(`http://${API_BASE}/api/status`);
+    const resp = await fetch(API_BASE + "/api/status");
     if (!resp.ok) throw new Error("HTTP " + resp.status);
     const data = await resp.json();
     updateDashboard(data);
@@ -231,19 +236,14 @@ function updateDashboard(d) {
   document.getElementById("btn-arm").disabled = !isIdle;
   document.getElementById("btn-disarm").disabled = !isArmed;
 
-  // Camera panel visibility: show and stream only when not idle
+  // Camera panel visibility: show only when not idle
   var cameraPanel = document.getElementById("camera-panel");
-  var cameraStream = document.getElementById("camera-stream");
-  var cameraLoading = document.getElementById("camera-loading");
   if (!isIdle) {
     cameraPanel.style.display = "block";
-    cameraStream.style.display = "block";
-    cameraLoading.style.display = "none";
-    startCameraRefresh();
+    startCameraDisplay();
   } else {
     cameraPanel.style.display = "none";
-    cameraStream.style.display = "none";
-    stopCameraRefresh();
+    stopCameraDisplay();
   }
 }
 
@@ -267,7 +267,7 @@ function setupControls() {
     .addEventListener("click", async function () {
       try {
         console.log("[ARM] Button clicked");
-        const resp = await fetch(`http://${API_BASE}/api/arm`, { method: "POST" });
+        const resp = await fetch(API_BASE + "/api/arm", { method: "POST" });
         const data = await resp.json();
         console.log("[ARM] Response:", data);
         if (!resp.ok) console.log("[ARM] HTTP Error:", resp.status);
@@ -280,7 +280,7 @@ function setupControls() {
     .addEventListener("click", async function () {
       try {
         console.log("[DISARM] Button clicked");
-        const resp = await fetch(`http://${API_BASE}/api/disarm`, { method: "POST" });
+        const resp = await fetch(API_BASE + "/api/disarm", { method: "POST" });
         const data = await resp.json();
         console.log("[DISARM] Response:", data);
         if (!resp.ok) console.log("[DISARM] HTTP Error:", resp.status);
@@ -291,7 +291,7 @@ function setupControls() {
   document
     .getElementById("btn-calibrate")
     .addEventListener("click", async function () {
-      await fetch(`http://${API_BASE}/api/calibrate`, { method: "POST" });
+      await fetch(API_BASE + "/api/calibrate", { method: "POST" });
     });
   document.getElementById("btn-config").addEventListener("click", openConfig);
   document
@@ -303,7 +303,7 @@ function setupControls() {
   document
     .getElementById("btn-bat-start")
     .addEventListener("click", async function () {
-      await fetch(`http://${API_BASE}/api/battery-test/start`, {
+      await fetch(API_BASE + "/api/battery-test/start", {
         method: "POST",
       });
       pollBatteryTest();
@@ -312,7 +312,7 @@ function setupControls() {
   document
     .getElementById("btn-bat-stop")
     .addEventListener("click", async function () {
-      await fetch(`http://${API_BASE}/api/battery-test/stop`, {
+      await fetch(API_BASE + "/api/battery-test/stop", {
         method: "POST",
       });
       pollBatteryTest();
@@ -321,7 +321,7 @@ function setupControls() {
   document
     .getElementById("btn-bat-clear")
     .addEventListener("click", async function () {
-      await fetch(`http://${API_BASE}/api/battery-tests/clear`, {
+      await fetch(API_BASE + "/api/battery-tests/clear", {
         method: "POST",
       });
       loadBatteryHistory();
@@ -332,7 +332,7 @@ function setupControls() {
 
 async function pollHardware() {
   try {
-    var resp = await fetch(`http://${API_BASE}/api/hardware`);
+    var resp = await fetch(API_BASE + "/api/hardware");
     var hw = await resp.json();
 
     // I2C bus status
@@ -383,7 +383,7 @@ async function pollHardware() {
 
 async function pollBatteryTest() {
   try {
-    var resp = await fetch(`http://${API_BASE}/api/battery-test`);
+    var resp = await fetch(API_BASE + "/api/battery-test");
     var test = await resp.json();
     var stateEl = document.getElementById("bat-test-state");
     var runtimeEl = document.getElementById("bat-test-runtime");
@@ -434,7 +434,7 @@ function formatDuration(seconds) {
 
 async function loadBatteryHistory() {
   try {
-    var resp = await fetch(`http://${API_BASE}/api/battery-tests`);
+    var resp = await fetch(API_BASE + "/api/battery-tests");
     var tests = await resp.json();
     var container = document.getElementById("bat-test-history");
     while (container.firstChild) {
@@ -490,7 +490,7 @@ async function loadBatteryHistory() {
 }
 
 async function openConfig() {
-  var resp = await fetch(`http://${API_BASE}/api/config`);
+  var resp = await fetch(API_BASE + "/api/config");
   var cfg = await resp.json();
   var container = document.getElementById("config-fields");
   while (container.firstChild) {
@@ -525,7 +525,7 @@ async function saveConfig() {
     var num = Number(val);
     cfg[input.dataset.key] = isNaN(num) ? val : num;
   });
-  await fetch(`http://${API_BASE}/api/config`, {
+  await fetch(API_BASE + "/api/config", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(cfg),

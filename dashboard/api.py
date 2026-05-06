@@ -124,71 +124,67 @@ def create_api_blueprint() -> Blueprint:
         power = _get_power_status()
         return jsonify({"pins": pins, "sensors": sensors, "power": power})
 
-    @bp.route("/api/camera/frame")
-    def camera_frame():
-        """Get current camera frame as JPEG."""
-        frame_file = Path("/tmp/rocket_camera_frame.jpg")
-        if frame_file.exists():
-            try:
-                frame_data = frame_file.read_bytes()
-                if frame_data:
-                    return Response(frame_data, mimetype='image/jpeg')
-            except Exception as e:
-                print(f"[CAMERA] Frame read error: {e}")
-        return _generate_test_frame()
-
-    def _generate_test_frame():
-        """Generate a test JPEG frame for development."""
-        try:
-            from PIL import Image, ImageDraw
-            import io
-            img = Image.new('RGB', (1280, 720), color='black')
-            draw = ImageDraw.Draw(img)
-            draw.text((640, 360), "No camera feed", fill='cyan')
-            buffer = io.BytesIO()
-            img.save(buffer, format='JPEG', quality=80)
-            return Response(buffer.getvalue(), mimetype='image/jpeg')
-        except Exception:
-            return Response(b'', mimetype='image/jpeg', status=204)
-
     @bp.route("/api/camera/stream")
     def camera_stream():
         """MJPEG stream from flight controller camera."""
         frame_file = Path("/tmp/rocket_camera_frame.jpg")
-        print(f"[STREAM] Starting MJPEG stream, frame_file exists: {frame_file.exists()}")
+        print(f"[STREAM] Client connected, waiting for frames from {frame_file}")
 
         def generate():
             last_frame = None
             frame_count = 0
-            no_update_count = 0
+            no_frame_time = 0
+            last_log = time.time()
+
             while True:
                 try:
                     if frame_file.exists():
-                        frame = frame_file.read_bytes()
-                        if frame and frame != last_frame:
+                        try:
+                            frame = frame_file.read_bytes()
+                        except:
+                            time.sleep(0.01)
+                            continue
+
+                        if frame and len(frame) > 100 and frame != last_frame:
                             last_frame = frame
                             frame_count += 1
-                            no_update_count = 0
-                            if frame_count % 30 == 0:
-                                print(f"[STREAM] Sent {frame_count} frames")
+                            no_frame_time = 0
+
+                            if time.time() - last_log >= 3.0:
+                                print(f"[STREAM] {frame_count} frames sent, latest: {len(frame)} bytes")
+                                last_log = time.time()
+
                             yield (b'--frame\r\n'
                                    b'Content-Type: image/jpeg\r\n'
                                    b'Content-Length: ' + str(len(frame)).encode() + b'\r\n\r\n'
                                    + frame + b'\r\n')
                         else:
-                            no_update_count += 1
-                            if no_update_count >= 50:
-                                print(f"[STREAM] No frame update for 5s, stream timeout")
+                            no_frame_time += 0.05
+                            if no_frame_time > 60:
+                                print(f"[STREAM] No valid frames for 60s, timeout")
                                 break
                     else:
-                        print(f"[STREAM] Frame file not found, waiting...")
-                        time.sleep(0.5)
+                        no_frame_time += 0.05
+                        if no_frame_time == 0.05:
+                            print(f"[STREAM] Frame file not found at {frame_file}, waiting...")
+                        if no_frame_time > 30:
+                            print(f"[STREAM] Frame file missing for 30s, timeout")
+                            break
+
+                    time.sleep(0.05)
+
+                except GeneratorExit:
+                    print(f"[STREAM] Client disconnected after {frame_count} frames")
+                    break
                 except Exception as e:
                     print(f"[STREAM] Error: {e}")
                     break
-                time.sleep(0.01)
 
-        return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+        resp = Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+        resp.headers['Cache-Control'] = 'public, max-age=0'
+        resp.headers['Pragma'] = 'no-cache'
+        resp.headers['Connection'] = 'close'
+        return resp
 
     return bp
 

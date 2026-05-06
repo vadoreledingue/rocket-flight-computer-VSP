@@ -1,7 +1,6 @@
 import io
 import threading
 import time
-import tempfile
 import os
 from pathlib import Path
 from datetime import datetime
@@ -36,16 +35,16 @@ class CameraStreamer:
         self._lock = threading.Lock()
 
         if not PICAMERA2_AVAILABLE:
-            print(
-                "Warning: picamera2 not available. Install with: apt install -y python3-picamera2")
+            print("[CAMERA] Warning: picamera2 not available. Install with: apt install -y python3-picamera2")
 
     def start(self, flight_id: str = None) -> None:
         """Start camera capture and recording."""
         if self.is_running:
+            print(f"[CAMERA] Already running, ignoring start request")
             return
 
         if not PICAMERA2_AVAILABLE:
-            print("Error: picamera2 not available")
+            print("[CAMERA] Error: picamera2 not available, cannot start")
             return
 
         self.is_running = True
@@ -53,99 +52,108 @@ class CameraStreamer:
             flight_id = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.video_file = self.video_dir / f"flight_{flight_id}.h264"
 
+        print(f"[CAMERA] Starting capture thread (flight_id={flight_id})")
         self.capture_thread = threading.Thread(
             target=self._capture_loop,
-            daemon=True
+            daemon=True,
+            name="CameraCapture"
         )
         self.capture_thread.start()
 
     def stop(self) -> None:
         """Stop camera capture and recording."""
+        if not self.is_running:
+            return
+
+        print("[CAMERA] Stopping capture...")
         self.is_running = False
+
         if self.camera:
             try:
                 self.camera.stop_recording()
                 self.camera.stop()
                 self.camera.close()
+                print("[CAMERA] Camera closed successfully")
             except Exception as e:
-                print(f"Error closing camera: {e}")
-            self.camera = None
-        if self.capture_thread:
-            self.capture_thread.join(timeout=2)
+                print(f"[CAMERA] Error closing camera: {e}")
+            finally:
+                self.camera = None
 
-    def get_frame(self) -> bytes:
-        """Returns current JPEG frame (for MJPEG streaming)."""
-        try:
-            with self._lock:
-                if self.frame_file.exists():
-                    return self.frame_file.read_bytes()
-        except Exception:
-            pass
-        return None
+        if self.capture_thread and self.capture_thread.is_alive():
+            self.capture_thread.join(timeout=3)
+            print("[CAMERA] Capture thread stopped")
 
     def _capture_loop(self) -> None:
-        """Picamera2 capture loop with video recording and frame extraction."""
+        """Picamera2 capture loop with H.264 recording and JPEG frame extraction."""
         try:
-            print("[CAMERA] Initializing camera...")
+            print("[CAMERA] Initializing Picamera2...")
             self.camera = Picamera2()
-            print("[CAMERA] Camera initialized")
 
             config = self.camera.create_video_configuration(
-                main={"format": "RGB888", "size": (self.width, self.height)},
-                controls={"FrameRate": self.fps}
+                main={"size": (self.width, self.height), "format": "YUV420"}
             )
             self.camera.configure(config)
-            print(
-                f"[CAMERA] Configured: {self.width}x{self.height} @ {self.fps}fps")
+            print(f"[CAMERA] Configured: {self.width}x{self.height} @ {self.fps}fps")
 
-            h264_encoder = H264Encoder(bitrate=5000000)
+            h264_encoder = H264Encoder(bitrate=2000000, repeat=True)
             file_output = FileOutput(str(self.video_file))
 
             self.camera.start()
             print("[CAMERA] Camera started")
 
             self.camera.start_recording(h264_encoder, file_output)
-            print(f"[CAMERA] Recording to {self.video_file}")
+            print(f"[CAMERA] Recording H.264 to {self.video_file}")
 
             frame_count = 0
-            tmp_dir = self.frame_file.parent
-            tmp_dir.mkdir(parents=True, exist_ok=True)
-            print(f"[CAMERA] Frame directory: {tmp_dir}")
+            last_log = time.time()
+            frame_dir = self.frame_file.parent
+            frame_dir.mkdir(parents=True, exist_ok=True)
 
             while self.is_running:
                 try:
-                    array = self.camera.capture_array()
-                    if array is None:
-                        print("[CAMERA] capture_array() returned None")
-                        time.sleep(0.1)
+                    request = self.camera.capture_request()
+                    if request is None:
+                        time.sleep(0.01)
                         continue
 
-                    image = Image.fromarray(array, mode='RGB')
-                    stream = io.BytesIO()
-                    image.save(stream, format="JPEG", quality=80)
-                    jpeg_data = stream.getvalue()
+                    try:
+                        array = request.make_array("main")
 
-                    with self._lock:
-                        with tempfile.NamedTemporaryFile(dir=str(tmp_dir), delete=False, suffix='.jpg') as tmp:
-                            tmp.write(jpeg_data)
-                            tmp_path = tmp.name
-                        os.replace(tmp_path, str(self.frame_file))
+                        if array is None or array.size == 0:
+                            print("[CAMERA] Invalid capture array")
+                            request.release()
+                            time.sleep(0.01)
+                            continue
 
-                    frame_count += 1
-                    if frame_count % 30 == 0:
-                        print(
-                            f"[CAMERA] Captured {frame_count} frames, last frame size: {len(jpeg_data)} bytes")
+                        image = Image.frombytes('YCbCr', (self.width, self.height),
+                                              array.tobytes(), 'raw', 'YCbCr')
+                        image_rgb = image.convert('RGB')
 
-                    time.sleep(1.0 / self.fps)
+                        stream = io.BytesIO()
+                        image_rgb.save(stream, format="JPEG", quality=75)
+                        jpeg_data = stream.getvalue()
+
+                        with self._lock:
+                            tmp_path = str(self.frame_file) + ".tmp"
+                            with open(tmp_path, 'wb') as f:
+                                f.write(jpeg_data)
+                            os.replace(tmp_path, str(self.frame_file))
+
+                        frame_count += 1
+                        now = time.time()
+                        if now - last_log >= 2.0:
+                            print(f"[CAMERA] {frame_count} frames, latest: {len(jpeg_data)} bytes")
+                            last_log = now
+
+                    finally:
+                        request.release()
 
                 except Exception as e:
                     print(f"[CAMERA] Frame capture error: {e}")
-                    import traceback
-                    traceback.print_exc()
                     time.sleep(0.1)
 
         except Exception as e:
-            print(f"[CAMERA] Camera initialization error: {e}")
+            print(f"[CAMERA] Init error: {e}")
             import traceback
             traceback.print_exc()
         finally:
