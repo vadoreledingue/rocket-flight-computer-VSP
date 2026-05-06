@@ -127,10 +127,10 @@ class CameraStreamer:
                         if now - last_preview_at < preview_interval:
                             continue
 
-                        tmp_path = str(self.frame_file) + ".tmp"
-                        request.save("main", tmp_path)
+                        tmp_path = self._temp_frame_path()
+                        request.save("main", str(tmp_path))
                         with self._lock:
-                            os.replace(tmp_path, str(self.frame_file))
+                            os.replace(str(tmp_path), str(self.frame_file))
 
                         self.last_frame_at = now
                         last_preview_at = now
@@ -184,3 +184,10 @@ class CameraStreamer:
             self.frame_file.unlink(missing_ok=True)
         except Exception as e:
             print(f"[CAMERA] Could not remove frame file: {e}")
+
+    def _temp_frame_path(self) -> Path:
+        if self.frame_file.suffix:
+            return self.frame_file.with_name(
+                f"{self.frame_file.stem}.tmp{self.frame_file.suffix}"
+            )
+        return self.frame_file.with_name(f"{self.frame_file.name}.tmp.jpg")
