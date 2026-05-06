@@ -109,17 +109,24 @@ class CameraStreamer:
 
             frame_count = 0
             tmp_dir = self.frame_file.parent
+            tmp_dir.mkdir(parents=True, exist_ok=True)
+            print(f"[CAMERA] Frame directory: {tmp_dir}")
+
             while self.is_running:
                 try:
                     array = self.camera.capture_array()
-                    image = Image.fromarray(array)
+                    if array is None:
+                        print("[CAMERA] capture_array() returned None")
+                        time.sleep(0.1)
+                        continue
 
+                    image = Image.fromarray(array, mode='RGB')
                     stream = io.BytesIO()
                     image.save(stream, format="JPEG", quality=80)
                     jpeg_data = stream.getvalue()
 
                     with self._lock:
-                        with tempfile.NamedTemporaryFile(dir=tmp_dir, delete=False, suffix='.jpg') as tmp:
+                        with tempfile.NamedTemporaryFile(dir=str(tmp_dir), delete=False, suffix='.jpg') as tmp:
                             tmp.write(jpeg_data)
                             tmp_path = tmp.name
                         os.replace(tmp_path, str(self.frame_file))
@@ -133,6 +140,8 @@ class CameraStreamer:
 
                 except Exception as e:
                     print(f"[CAMERA] Frame capture error: {e}")
+                    import traceback
+                    traceback.print_exc()
                     time.sleep(0.1)
 
         except Exception as e:
