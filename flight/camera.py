@@ -1,6 +1,8 @@
 import io
 import threading
 import time
+import tempfile
+import os
 from pathlib import Path
 from datetime import datetime
 
@@ -34,7 +36,8 @@ class CameraStreamer:
         self._lock = threading.Lock()
 
         if not PICAMERA2_AVAILABLE:
-            print("Warning: picamera2 not available. Install with: apt install -y python3-picamera2")
+            print(
+                "Warning: picamera2 not available. Install with: apt install -y python3-picamera2")
 
     def start(self, flight_id: str = None) -> None:
         """Start camera capture and recording."""
@@ -92,7 +95,8 @@ class CameraStreamer:
                 controls={"FrameRate": self.fps}
             )
             self.camera.configure(config)
-            print(f"[CAMERA] Configured: {self.width}x{self.height} @ {self.fps}fps")
+            print(
+                f"[CAMERA] Configured: {self.width}x{self.height} @ {self.fps}fps")
 
             h264_encoder = H264Encoder(bitrate=5000000)
             file_output = FileOutput(str(self.video_file))
@@ -104,6 +108,7 @@ class CameraStreamer:
             print(f"[CAMERA] Recording to {self.video_file}")
 
             frame_count = 0
+            tmp_dir = self.frame_file.parent
             while self.is_running:
                 try:
                     array = self.camera.capture_array()
@@ -114,11 +119,15 @@ class CameraStreamer:
                     jpeg_data = stream.getvalue()
 
                     with self._lock:
-                        self.frame_file.write_bytes(jpeg_data)
+                        with tempfile.NamedTemporaryFile(dir=tmp_dir, delete=False, suffix='.jpg') as tmp:
+                            tmp.write(jpeg_data)
+                            tmp_path = tmp.name
+                        os.replace(tmp_path, str(self.frame_file))
 
                     frame_count += 1
                     if frame_count % 30 == 0:
-                        print(f"[CAMERA] Captured {frame_count} frames, last frame size: {len(jpeg_data)} bytes")
+                        print(
+                            f"[CAMERA] Captured {frame_count} frames, last frame size: {len(jpeg_data)} bytes")
 
                     time.sleep(1.0 / self.fps)
 
@@ -141,5 +150,3 @@ class CameraStreamer:
                 except Exception:
                     pass
                 self.camera = None
-
-

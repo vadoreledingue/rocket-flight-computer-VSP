@@ -119,44 +119,18 @@ def create_api_blueprint() -> Blueprint:
         power = _get_power_status()
         return jsonify({"pins": pins, "sensors": sensors, "power": power})
 
-    @bp.route("/api/camera/stream")
-    def camera_stream():
-        """MJPEG stream from flight controller camera."""
+    @bp.route("/api/camera/frame")
+    def camera_frame():
+        """Get current camera frame as JPEG."""
         frame_file = Path("/tmp/rocket_camera_frame.jpg")
-        print(f"[STREAM] Starting stream, frame_file exists: {frame_file.exists()}")
-
-        def generate():
-            last_frame = None
-            frame_count = 0
-            no_update_count = 0
-            while True:
-                try:
-                    if frame_file.exists():
-                        frame = frame_file.read_bytes()
-                        if frame and frame != last_frame:
-                            last_frame = frame
-                            frame_count += 1
-                            no_update_count = 0
-                            if frame_count % 10 == 0:
-                                print(f"[STREAM] Sent {frame_count} frames")
-                            yield (b'--frame\r\n'
-                                   b'Content-Type: image/jpeg\r\n'
-                                   b'Content-Length: ' + str(len(frame)).encode() + b'\r\n\r\n'
-                                   + frame + b'\r\n')
-                        else:
-                            no_update_count += 1
-                            if no_update_count >= 50:
-                                print(f"[STREAM] No frame update for 5s, stream timeout")
-                                break
-                    else:
-                        print(f"[STREAM] Frame file not found: {frame_file}")
-                        break
-                except Exception as e:
-                    print(f"[STREAM] Error: {e}")
-                    break
-                time.sleep(0.1)
-
-        return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+        if frame_file.exists():
+            try:
+                frame_data = frame_file.read_bytes()
+                if frame_data:
+                    return Response(frame_data, mimetype='image/jpeg')
+            except Exception as e:
+                print(f"[CAMERA] Frame read error: {e}")
+        return Response(b'', mimetype='image/jpeg', status=204)
 
     return bp
 

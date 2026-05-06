@@ -1,8 +1,11 @@
 let attitude;
 let pollInterval;
 let altitudeChart, accelChart;
+let cameraRefreshInterval;
+let cameraRefreshActive = false;
 const CHART_UPDATE_MS = 1000;
 const POLL_MS = 500;
+const CAMERA_REFRESH_MS = 100;
 const API_BASE = `${window.location.hostname}:8080`;
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -18,13 +21,29 @@ document.addEventListener("DOMContentLoaded", function () {
   loadBatteryHistory();
   pollHardware();
   setInterval(pollHardware, 5000);
-  updateCameraStreamUrl();
 });
 
 function updateCameraStreamUrl() {
   const cameraStream = document.getElementById("camera-stream");
   if (cameraStream) {
-    cameraStream.src = `http://${API_BASE}/api/camera/stream`;
+    cameraStream.src = `http://${API_BASE}/api/camera/frame?t=${Date.now()}`;
+  }
+}
+
+function startCameraRefresh() {
+  if (cameraRefreshActive) return;
+  cameraRefreshActive = true;
+  cameraRefreshInterval = setInterval(function () {
+    updateCameraStreamUrl();
+  }, CAMERA_REFRESH_MS);
+  updateCameraStreamUrl();
+}
+
+function stopCameraRefresh() {
+  cameraRefreshActive = false;
+  if (cameraRefreshInterval) {
+    clearInterval(cameraRefreshInterval);
+    cameraRefreshInterval = null;
   }
 }
 
@@ -85,7 +104,9 @@ function initCharts() {
 
 async function fetchHistory(seconds = 60) {
   try {
-    const resp = await fetch(`http://${API_BASE}/api/history?seconds=${seconds}`);
+    const resp = await fetch(
+      `http://${API_BASE}/api/history?seconds=${seconds}`,
+    );
     if (!resp.ok) return null;
     const rows = await resp.json();
     return rows;
@@ -209,21 +230,19 @@ function updateDashboard(d) {
   document.getElementById("btn-arm").disabled = !isIdle;
   document.getElementById("btn-disarm").disabled = !isArmed;
 
-  // Camera panel visibility: show only when not idle
+  // Camera panel visibility: show and stream only when not idle
   var cameraPanel = document.getElementById("camera-panel");
   var cameraStream = document.getElementById("camera-stream");
   var cameraLoading = document.getElementById("camera-loading");
-  if (!isIdle && d.state !== "ARMED") {
+  if (!isIdle) {
     cameraPanel.style.display = "block";
     cameraStream.style.display = "block";
     cameraLoading.style.display = "none";
-  } else if (d.state === "ARMED") {
-    cameraPanel.style.display = "block";
-    cameraStream.style.display = "block";
-    cameraLoading.style.display = "none";
+    startCameraRefresh();
   } else {
     cameraPanel.style.display = "none";
     cameraStream.style.display = "none";
+    stopCameraRefresh();
   }
 }
 
@@ -267,21 +286,27 @@ function setupControls() {
   document
     .getElementById("btn-bat-start")
     .addEventListener("click", async function () {
-      await fetch(`http://${API_BASE}/api/battery-test/start`, { method: "POST" });
+      await fetch(`http://${API_BASE}/api/battery-test/start`, {
+        method: "POST",
+      });
       pollBatteryTest();
       loadBatteryHistory();
     });
   document
     .getElementById("btn-bat-stop")
     .addEventListener("click", async function () {
-      await fetch(`http://${API_BASE}/api/battery-test/stop`, { method: "POST" });
+      await fetch(`http://${API_BASE}/api/battery-test/stop`, {
+        method: "POST",
+      });
       pollBatteryTest();
       loadBatteryHistory();
     });
   document
     .getElementById("btn-bat-clear")
     .addEventListener("click", async function () {
-      await fetch(`http://${API_BASE}/api/battery-tests/clear`, { method: "POST" });
+      await fetch(`http://${API_BASE}/api/battery-tests/clear`, {
+        method: "POST",
+      });
       loadBatteryHistory();
     });
 }
