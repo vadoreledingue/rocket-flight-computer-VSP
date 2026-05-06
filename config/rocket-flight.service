@@ -4,7 +4,7 @@ After=multi-user.target
 
 [Service]
 Type=simple
-User=pi
+User=vld
 WorkingDirectory=/opt/rocket
 ExecStart=/opt/rocket/venv/bin/python -m flight.main
 Restart=on-failure
