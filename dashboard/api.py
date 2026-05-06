@@ -41,23 +41,23 @@ def create_api_blueprint() -> Blueprint:
 
     @bp.route("/api/arm", methods=["POST"])
     def arm():
-        cfg = current_app.config["config_manager"]
-        cfg.set("arm_requested", "true")
-        db = current_app.config["db"]
-        rows = db.get_latest_readings(count=1)
-        if rows:
-            return jsonify({"status": "arm requested", "state": rows[0]["state"]})
-        return jsonify({"status": "arm requested"})
+        try:
+            cfg = current_app.config["config_manager"]
+            cfg.set("arm_requested", "true")
+            return jsonify({"status": "ok"})
+        except Exception as e:
+            print(f"[ARM] Error: {e}")
+            return jsonify({"error": str(e)}), 500
 
     @bp.route("/api/disarm", methods=["POST"])
     def disarm():
-        cfg = current_app.config["config_manager"]
-        cfg.set("disarm_requested", "true")
-        db = current_app.config["db"]
-        rows = db.get_latest_readings(count=1)
-        if rows:
-            return jsonify({"status": "disarm requested", "state": rows[0]["state"]})
-        return jsonify({"status": "disarm requested"})
+        try:
+            cfg = current_app.config["config_manager"]
+            cfg.set("disarm_requested", "true")
+            return jsonify({"status": "ok"})
+        except Exception as e:
+            print(f"[DISARM] Error: {e}")
+            return jsonify({"error": str(e)}), 500
 
     @bp.route("/api/calibrate", methods=["POST"])
     def calibrate():

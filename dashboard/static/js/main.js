@@ -265,12 +265,28 @@ function setupControls() {
   document
     .getElementById("btn-arm")
     .addEventListener("click", async function () {
-      await fetch(`http://${API_BASE}/api/arm`, { method: "POST" });
+      try {
+        console.log("[ARM] Button clicked");
+        const resp = await fetch(`http://${API_BASE}/api/arm`, { method: "POST" });
+        const data = await resp.json();
+        console.log("[ARM] Response:", data);
+        if (!resp.ok) console.log("[ARM] HTTP Error:", resp.status);
+      } catch (e) {
+        console.log("[ARM] Error:", e);
+      }
     });
   document
     .getElementById("btn-disarm")
     .addEventListener("click", async function () {
-      await fetch(`http://${API_BASE}/api/disarm`, { method: "POST" });
+      try {
+        console.log("[DISARM] Button clicked");
+        const resp = await fetch(`http://${API_BASE}/api/disarm`, { method: "POST" });
+        const data = await resp.json();
+        console.log("[DISARM] Response:", data);
+        if (!resp.ok) console.log("[DISARM] HTTP Error:", resp.status);
+      } catch (e) {
+        console.log("[DISARM] Error:", e);
+      }
     });
   document
     .getElementById("btn-calibrate")
