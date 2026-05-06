@@ -130,7 +130,21 @@ def create_api_blueprint() -> Blueprint:
                     return Response(frame_data, mimetype='image/jpeg')
             except Exception as e:
                 print(f"[CAMERA] Frame read error: {e}")
-        return Response(b'', mimetype='image/jpeg', status=204)
+        return _generate_test_frame()
+
+    def _generate_test_frame():
+        """Generate a test JPEG frame for development."""
+        try:
+            from PIL import Image, ImageDraw
+            import io
+            img = Image.new('RGB', (1280, 720), color='black')
+            draw = ImageDraw.Draw(img)
+            draw.text((640, 360), "No camera feed", fill='cyan')
+            buffer = io.BytesIO()
+            img.save(buffer, format='JPEG', quality=80)
+            return Response(buffer.getvalue(), mimetype='image/jpeg')
+        except Exception:
+            return Response(b'', mimetype='image/jpeg', status=204)
 
     @bp.route("/api/camera/stream")
     def camera_stream():
