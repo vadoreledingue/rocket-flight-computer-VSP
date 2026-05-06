@@ -10,13 +10,10 @@ def create_api_blueprint() -> Blueprint:
     @bp.route("/api/status")
     def status():
         db = current_app.config["db"]
-        sm = current_app.config["state_machine"]
         rows = db.get_latest_readings(count=1)
         if rows:
-            data = rows[0]
-            data["state"] = sm.state.value
-            return jsonify(data)
-        return jsonify({"state": sm.state.value})
+            return jsonify(rows[0])
+        return jsonify({"state": "IDLE"})
 
     @bp.route("/api/history")
     def history():
