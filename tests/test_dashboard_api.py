@@ -2,6 +2,7 @@ import os
 import json
 import tempfile
 import time
+from pathlib import Path
 import pytest
 from flight.database import FlightDB
 from flight.config import ConfigManager
@@ -95,7 +96,8 @@ def test_api_arm(client):
     resp = client.post("/api/arm")
     assert resp.status_code == 200
     data = json.loads(resp.data)
-    assert data["state"] == "ARMED"
+    assert data["status"] == "ok"
+    assert client.application.config["config_manager"].get("arm_requested") == "true"
 
 
 def test_api_disarm(client):
@@ -103,7 +105,8 @@ def test_api_disarm(client):
     resp = client.post("/api/disarm")
     assert resp.status_code == 200
     data = json.loads(resp.data)
-    assert data["state"] == "IDLE"
+    assert data["status"] == "ok"
+    assert client.application.config["config_manager"].get("disarm_requested") == "true"
 
 
 def test_api_battery_test_lifecycle(client):
@@ -160,9 +163,22 @@ def test_api_hardware_status(client):
     data = json.loads(resp.data)
     assert "pins" in data
     assert "sensors" in data
-    assert len(data["pins"]) == 6
+    assert len(data["pins"]) == 5
     assert len(data["sensors"]) == 2
     # On dev machine, i2cdetect not available, so sensors show not connected
     for sensor in data["sensors"]:
         assert "name" in sensor
         assert "connected" in sensor
+
+
+def test_api_camera_stream_reads_shared_frame_file(client, tmp_path):
+    frame_file = tmp_path / "rocket_camera_frame.jpg"
+    frame_file.write_bytes(b"\xff\xd8" + b"\x00" * 256 + b"\xff\xd9")
+    client.application.config["camera_frame_file"] = Path(frame_file)
+
+    resp = client.get("/api/camera/stream")
+
+    assert resp.status_code == 200
+    assert resp.mimetype == "multipart/x-mixed-replace"
+    first_chunk = next(resp.response)
+    assert b"Content-Type: image/jpeg" in first_chunk

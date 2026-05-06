@@ -1,8 +1,12 @@
 let attitude;
 let pollInterval;
 let altitudeChart, accelChart;
+let cameraReconnectTimer = null;
+let cameraStreamingRequested = false;
 const CHART_UPDATE_MS = 1000;
 const POLL_MS = 500;
+const CAMERA_STATES = new Set(["ARMED", "ASCENT", "APOGEE", "DESCENT"]);
+const CAMERA_RETRY_MS = 1500;
 
 const API_BASE = window.location.protocol + "//" + window.location.host;
 
@@ -19,22 +23,70 @@ document.addEventListener("DOMContentLoaded", function () {
   loadBatteryHistory();
   pollHardware();
   setInterval(pollHardware, 5000);
+  setupCameraDisplay();
 });
 
 function startCameraDisplay() {
   const cameraImg = document.getElementById("camera-stream");
-  if (cameraImg && !cameraImg.src) {
-    cameraImg.src = API_BASE + "/api/camera/stream";
+  if (!cameraImg) {
+    return;
+  }
+  cameraStreamingRequested = true;
+  clearTimeout(cameraReconnectTimer);
+  if (!cameraImg.dataset.streaming) {
+    cameraImg.dataset.streaming = "true";
+    cameraImg.src = API_BASE + "/api/camera/stream?t=" + Date.now();
+    setCameraStatus("Waiting for camera...");
     console.log("[CAMERA] Started streaming:", cameraImg.src);
   }
 }
 
 function stopCameraDisplay() {
   const cameraImg = document.getElementById("camera-stream");
+  cameraStreamingRequested = false;
+  clearTimeout(cameraReconnectTimer);
   if (cameraImg) {
+    cameraImg.dataset.streaming = "";
     cameraImg.src = "";
+    cameraImg.style.display = "none";
+    setCameraStatus("Camera inactive");
     console.log("[CAMERA] Stopped streaming");
   }
+}
+
+function setupCameraDisplay() {
+  const cameraImg = document.getElementById("camera-stream");
+  if (!cameraImg) {
+    return;
+  }
+
+  cameraImg.addEventListener("load", function () {
+    cameraImg.style.display = "block";
+    setCameraStatus("");
+  });
+
+  cameraImg.addEventListener("error", function () {
+    cameraImg.style.display = "none";
+    cameraImg.dataset.streaming = "";
+    if (!cameraStreamingRequested) {
+      return;
+    }
+    setCameraStatus("Camera unavailable, retrying...");
+    cameraReconnectTimer = window.setTimeout(function () {
+      if (cameraStreamingRequested) {
+        startCameraDisplay();
+      }
+    }, CAMERA_RETRY_MS);
+  });
+}
+
+function setCameraStatus(message) {
+  const statusEl = document.getElementById("camera-stream-status");
+  if (!statusEl) {
+    return;
+  }
+  statusEl.textContent = message;
+  statusEl.style.display = message ? "block" : "none";
 }
 
 
@@ -152,9 +204,10 @@ async function poll() {
 }
 
 function updateDashboard(d) {
+  const state = d.state || "IDLE";
   var stateEl = document.getElementById("flight-state");
-  stateEl.textContent = d.state || "IDLE";
-  stateEl.className = "state " + (d.state || "idle").toLowerCase();
+  stateEl.textContent = state;
+  stateEl.className = "state " + state.toLowerCase();
 
   // PFD: altitude and vertical speed
   document.getElementById("alt-value").textContent =
@@ -184,7 +237,7 @@ function updateDashboard(d) {
 
   // Logging status
   var logEl = document.getElementById("logging-status");
-  var isActive = d.state && d.state !== "IDLE";
+  var isActive = state !== "IDLE";
   logEl.textContent = isActive ? "ACTIVE" : "INACTIVE";
   logEl.className = "value " + (isActive ? "status-active" : "status-inactive");
 
@@ -216,14 +269,14 @@ function updateDashboard(d) {
     : "--";
 
   // Button states
-  var isIdle = !d.state || d.state === "IDLE";
-  var isArmed = d.state === "ARMED";
+  var isIdle = state === "IDLE";
+  var isArmed = state === "ARMED";
   document.getElementById("btn-arm").disabled = !isIdle;
   document.getElementById("btn-disarm").disabled = !isArmed;
 
-  // Camera panel visibility: show only when not idle
+  // Camera panel visibility: active once the system has been armed for flight.
   var cameraPanel = document.getElementById("camera-panel");
-  if (!isIdle) {
+  if (CAMERA_STATES.has(state)) {
     cameraPanel.style.display = "block";
     startCameraDisplay();
   } else {

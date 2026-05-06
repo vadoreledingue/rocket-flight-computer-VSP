@@ -91,17 +91,11 @@ class FlightController:
 
         self.logger.log(data, state=current_state.value, timestamp=now)
 
-        # Handle camera state transitions
         if self._previous_state != current_state:
-            print(f"[STATE] {self._previous_state} → {current_state}")
-            if current_state == FlightState.ARMED:
-                flight_id = self.logger.flight_id or f"{int(now)}"
-                print(f"[CAMERA] Starting camera (flight_id={flight_id})")
-                self.camera.start(flight_id)
-            elif current_state == FlightState.LANDED:
-                print(f"[CAMERA] Stopping camera")
-                self.camera.stop()
+            print(f"[STATE] {self._previous_state} -> {current_state}")
             self._previous_state = current_state
+
+        self._sync_camera_state(now, current_state)
 
         if now - self._last_config_check >= 1.0:
             self.config.reload()
@@ -129,6 +123,23 @@ class FlightController:
                 bat_test = self.db.get_active_battery_test()
                 if bat_test and bat_test["low_at"] is None:
                     self.db.set_battery_test_low(bat_test["id"], now)
+
+    def _sync_camera_state(self, now: float, current_state: FlightState) -> None:
+        active_camera_states = {
+            FlightState.ARMED,
+            FlightState.ASCENT,
+            FlightState.APOGEE,
+            FlightState.DESCENT,
+        }
+        should_run = current_state in active_camera_states
+
+        if should_run and not self.camera.is_running:
+            flight_id = str(self.logger.flight_id or int(now))
+            print(f"[CAMERA] Starting camera (flight_id={flight_id})")
+            self.camera.start(flight_id)
+        elif not should_run and self.camera.is_running:
+            print("[CAMERA] Stopping camera")
+            self.camera.stop()
 
     def get_sample_rate(self) -> float:
         state = self.state_machine.state

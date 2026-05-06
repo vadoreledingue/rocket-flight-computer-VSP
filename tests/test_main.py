@@ -1,9 +1,9 @@
 import os
 import tempfile
-import time
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from flight.main import FlightController
+from flight.state_machine import FlightState
 
 
 @pytest.fixture
@@ -65,3 +65,29 @@ def test_tick_handles_sensor_failure_gracefully(db_path, mock_sensors):
         db_path=db_path, bmp280_sensor=bmp280, mpu6050_sensor=mpu6050, power_sensor=pwr)
     ctrl.state_machine.arm()
     ctrl.tick()  # should not crash
+
+
+def test_camera_starts_when_flight_is_armed(db_path, mock_sensors):
+    bmp280, mpu6050, pwr = mock_sensors
+    ctrl = FlightController(
+        db_path=db_path, bmp280_sensor=bmp280, mpu6050_sensor=mpu6050, power_sensor=pwr)
+    ctrl.camera = MagicMock()
+    ctrl.camera.is_running = False
+
+    ctrl.state_machine.arm()
+    ctrl.tick()
+
+    ctrl.camera.start.assert_called_once()
+
+
+def test_camera_stops_when_state_is_no_longer_active(db_path, mock_sensors):
+    bmp280, mpu6050, pwr = mock_sensors
+    ctrl = FlightController(
+        db_path=db_path, bmp280_sensor=bmp280, mpu6050_sensor=mpu6050, power_sensor=pwr)
+    ctrl.camera = MagicMock()
+    ctrl.camera.is_running = True
+    ctrl.state_machine._state = FlightState.LANDED
+
+    ctrl.tick()
+
+    ctrl.camera.stop.assert_called_once()

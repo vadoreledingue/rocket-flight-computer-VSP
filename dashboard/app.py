@@ -1,5 +1,6 @@
 from flask import Flask
 from dashboard.api import create_api_blueprint
+from flight.camera import DEFAULT_FRAME_FILE
 from flight.database import FlightDB
 from flight.config import ConfigManager
 from flight.state_machine import StateMachine
@@ -24,6 +25,9 @@ def create_app(db_path: str | None = None) -> Flask:
     app.config["db"] = db
     app.config["config_manager"] = config
     app.config["state_machine"] = state_machine
+    app.config["camera_frame_file"] = Path(
+        os.environ.get("ROCKET_CAMERA_FRAME_FILE", DEFAULT_FRAME_FILE)
+    )
     api_bp = create_api_blueprint()
     app.register_blueprint(api_bp)
 

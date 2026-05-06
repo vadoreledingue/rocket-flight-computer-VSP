@@ -2,6 +2,7 @@ import subprocess
 import time
 from pathlib import Path
 from flask import Blueprint, request, jsonify, current_app, Response
+from flight.camera import DEFAULT_FRAME_FILE
 
 
 def create_api_blueprint() -> Blueprint:
@@ -127,13 +128,12 @@ def create_api_blueprint() -> Blueprint:
     @bp.route("/api/camera/stream")
     def camera_stream():
         """MJPEG stream from flight controller camera."""
-        frame_file = Path("/dev/shm/rocket_camera_frame.jpg")
+        frame_file = Path(current_app.config.get("camera_frame_file", DEFAULT_FRAME_FILE))
         print(f"[STREAM] Client connected, waiting for frames from {frame_file}")
 
         def generate():
             last_frame = None
             frame_count = 0
-            no_frame_time = 0
             last_log = time.time()
 
             while True:
@@ -141,14 +141,13 @@ def create_api_blueprint() -> Blueprint:
                     if frame_file.exists():
                         try:
                             frame = frame_file.read_bytes()
-                        except:
+                        except OSError:
                             time.sleep(0.01)
                             continue
 
                         if frame and len(frame) > 100 and frame != last_frame:
                             last_frame = frame
                             frame_count += 1
-                            no_frame_time = 0
 
                             if time.time() - last_log >= 3.0:
                                 print(f"[STREAM] {frame_count} frames sent, latest: {len(frame)} bytes")
@@ -158,18 +157,10 @@ def create_api_blueprint() -> Blueprint:
                                    b'Content-Type: image/jpeg\r\n'
                                    b'Content-Length: ' + str(len(frame)).encode() + b'\r\n\r\n'
                                    + frame + b'\r\n')
-                        else:
-                            no_frame_time += 0.05
-                            if no_frame_time > 60:
-                                print(f"[STREAM] No valid frames for 60s, timeout")
-                                break
                     else:
-                        no_frame_time += 0.05
-                        if no_frame_time == 0.05:
+                        if frame_count == 0 and time.time() - last_log >= 3.0:
                             print(f"[STREAM] Frame file not found at {frame_file}, waiting...")
-                        if no_frame_time > 30:
-                            print(f"[STREAM] Frame file missing for 30s, timeout")
-                            break
+                            last_log = time.time()
 
                     time.sleep(0.05)
 
