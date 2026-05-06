@@ -108,15 +108,15 @@ class FlightController:
             self._last_config_check = now
 
             # Check for arm/disarm commands from dashboard
-            if self.config.get("arm_requested"):
+            if self.config.get("arm_requested") == "true":
                 print("[DASHBOARD] ARM requested")
                 self.state_machine.arm()
-                self.config.set("arm_requested", False)
+                self.config.set("arm_requested", "false")
 
-            if self.config.get("disarm_requested"):
+            if self.config.get("disarm_requested") == "true":
                 print("[DASHBOARD] DISARM requested")
                 self.state_machine.disarm()
-                self.config.set("disarm_requested", False)
+                self.config.set("disarm_requested", "false")
 
             # Check for calibration request from dashboard
             if self.config.get("calibrate_requested"):
