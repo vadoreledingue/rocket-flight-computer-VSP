@@ -132,6 +132,45 @@ def create_api_blueprint() -> Blueprint:
                 print(f"[CAMERA] Frame read error: {e}")
         return Response(b'', mimetype='image/jpeg', status=204)
 
+    @bp.route("/api/camera/stream")
+    def camera_stream():
+        """MJPEG stream from flight controller camera."""
+        frame_file = Path("/tmp/rocket_camera_frame.jpg")
+        print(f"[STREAM] Starting MJPEG stream, frame_file exists: {frame_file.exists()}")
+
+        def generate():
+            last_frame = None
+            frame_count = 0
+            no_update_count = 0
+            while True:
+                try:
+                    if frame_file.exists():
+                        frame = frame_file.read_bytes()
+                        if frame and frame != last_frame:
+                            last_frame = frame
+                            frame_count += 1
+                            no_update_count = 0
+                            if frame_count % 30 == 0:
+                                print(f"[STREAM] Sent {frame_count} frames")
+                            yield (b'--frame\r\n'
+                                   b'Content-Type: image/jpeg\r\n'
+                                   b'Content-Length: ' + str(len(frame)).encode() + b'\r\n\r\n'
+                                   + frame + b'\r\n')
+                        else:
+                            no_update_count += 1
+                            if no_update_count >= 50:
+                                print(f"[STREAM] No frame update for 5s, stream timeout")
+                                break
+                    else:
+                        print(f"[STREAM] Frame file not found, waiting...")
+                        time.sleep(0.5)
+                except Exception as e:
+                    print(f"[STREAM] Error: {e}")
+                    break
+                time.sleep(0.01)
+
+        return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+
     return bp
 
 

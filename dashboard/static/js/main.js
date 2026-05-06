@@ -1,11 +1,10 @@
 let attitude;
 let pollInterval;
 let altitudeChart, accelChart;
-let cameraRefreshInterval;
-let cameraRefreshActive = false;
+let cameraStreamReader;
+let cameraStreamAbort;
 const CHART_UPDATE_MS = 1000;
 const POLL_MS = 500;
-const CAMERA_REFRESH_MS = 100;
 const API_BASE = `${window.location.hostname}:8080`;
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -23,29 +22,117 @@ document.addEventListener("DOMContentLoaded", function () {
   setInterval(pollHardware, 5000);
 });
 
-function updateCameraStreamUrl() {
-  const cameraStream = document.getElementById("camera-stream");
-  if (cameraStream) {
-    cameraStream.src = `http://${API_BASE}/api/camera/frame?t=${Date.now()}`;
+function startCameraStream() {
+  if (cameraStreamReader) return;
+  console.log("[CAMERA] Starting MJPEG stream");
+
+  cameraStreamAbort = new AbortController();
+  fetch(`http://${API_BASE}/api/camera/stream`, { signal: cameraStreamAbort.signal })
+    .then(response => {
+      if (!response.ok) throw new Error("Stream failed");
+      return response.body.getReader();
+    })
+    .then(reader => {
+      cameraStreamReader = reader;
+      processMJPEGStream(reader);
+    })
+    .catch(err => {
+      if (err.name !== 'AbortError') {
+        console.log("[CAMERA] Stream error:", err);
+      }
+      cameraStreamReader = null;
+    });
+}
+
+function stopCameraStream() {
+  console.log("[CAMERA] Stopping MJPEG stream");
+  if (cameraStreamAbort) {
+    cameraStreamAbort.abort();
+  }
+  cameraStreamReader = null;
+}
+
+async function processMJPEGStream(reader) {
+  const decoder = new TextDecoder("utf-8");
+  const cameraImg = document.getElementById("camera-stream");
+  let buffer = new Uint8Array(0);
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer = concatenateUint8Arrays(buffer, value);
+
+      let frameStart = -1;
+      while ((frameStart = findSequence(buffer, [45, 45, 102, 114, 97, 109, 101])) !== -1) {
+        buffer = buffer.slice(frameStart + 7);
+
+        const contentLengthMatch = findString(buffer, "Content-Length: ");
+        if (contentLengthMatch === -1) break;
+
+        let numEnd = contentLengthMatch + 16;
+        while (numEnd < buffer.length && buffer[numEnd] !== 13) numEnd++;
+
+        const lengthStr = decoder.decode(buffer.slice(contentLengthMatch + 16, numEnd));
+        const contentLength = parseInt(lengthStr, 10);
+
+        if (isNaN(contentLength)) {
+          console.log("[MJPEG] Invalid content length");
+          break;
+        }
+
+        const headerEnd = findSequence(buffer, [13, 10, 13, 10]);
+        if (headerEnd === -1) break;
+
+        const frameStart2 = headerEnd + 4;
+        const frameEnd = frameStart2 + contentLength;
+
+        if (frameEnd > buffer.length) break;
+
+        const frameData = buffer.slice(frameStart2, frameEnd);
+        const blob = new Blob([frameData], { type: 'image/jpeg' });
+        const url = URL.createObjectURL(blob);
+        cameraImg.src = url;
+
+        buffer = buffer.slice(frameEnd);
+      }
+    }
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.log("[MJPEG] Parser error:", err);
+    }
+  } finally {
+    cameraStreamReader = null;
   }
 }
 
-function startCameraRefresh() {
-  if (cameraRefreshActive) return;
-  cameraRefreshActive = true;
-  cameraRefreshInterval = setInterval(function () {
-    updateCameraStreamUrl();
-  }, CAMERA_REFRESH_MS);
-  updateCameraStreamUrl();
+function findSequence(buffer, sequence) {
+  for (let i = 0; i < buffer.length - sequence.length; i++) {
+    let match = true;
+    for (let j = 0; j < sequence.length; j++) {
+      if (buffer[i + j] !== sequence[j]) {
+        match = false;
+        break;
+      }
+    }
+    if (match) return i;
+  }
+  return -1;
 }
 
-function stopCameraRefresh() {
-  cameraRefreshActive = false;
-  if (cameraRefreshInterval) {
-    clearInterval(cameraRefreshInterval);
-    cameraRefreshInterval = null;
-  }
+function findString(buffer, str) {
+  const bytes = new TextEncoder().encode(str);
+  return findSequence(buffer, Array.from(bytes));
 }
+
+function concatenateUint8Arrays(a, b) {
+  const result = new Uint8Array(a.length + b.length);
+  result.set(a);
+  result.set(b, a.length);
+  return result;
+}
+
 
 function startPolling() {
   poll();
@@ -238,11 +325,11 @@ function updateDashboard(d) {
     cameraPanel.style.display = "block";
     cameraStream.style.display = "block";
     cameraLoading.style.display = "none";
-    startCameraRefresh();
+    startCameraStream();
   } else {
     cameraPanel.style.display = "none";
     cameraStream.style.display = "none";
-    stopCameraRefresh();
+    stopCameraStream();
   }
 }
 
