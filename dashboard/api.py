@@ -127,7 +127,7 @@ def create_api_blueprint() -> Blueprint:
     @bp.route("/api/camera/stream")
     def camera_stream():
         """MJPEG stream from flight controller camera."""
-        frame_file = Path("/tmp/rocket_camera_frame.jpg")
+        frame_file = Path("/dev/shm/rocket_camera_frame.jpg")
         print(f"[STREAM] Client connected, waiting for frames from {frame_file}")
 
         def generate():

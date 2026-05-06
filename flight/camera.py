@@ -20,7 +20,7 @@ class CameraStreamer:
 
     def __init__(self, width: int = 1280, height: int = 720, fps: int = 24,
                  video_dir: str = "/opt/rocket/videos",
-                 frame_file: str = "/tmp/rocket_camera_frame.jpg") -> None:
+                 frame_file: str = "/dev/shm/rocket_camera_frame.jpg") -> None:
         self.width = width
         self.height = height
         self.fps = fps
