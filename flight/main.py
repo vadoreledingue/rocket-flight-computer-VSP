@@ -107,6 +107,17 @@ class FlightController:
             self.config.reload()
             self._last_config_check = now
 
+            # Check for arm/disarm commands from dashboard
+            if self.config.get("arm_requested"):
+                print("[DASHBOARD] ARM requested")
+                self.state_machine.arm()
+                self.config.set("arm_requested", False)
+
+            if self.config.get("disarm_requested"):
+                print("[DASHBOARD] DISARM requested")
+                self.state_machine.disarm()
+                self.config.set("disarm_requested", False)
+
             # Check for calibration request from dashboard
             if self.config.get("calibrate_requested"):
                 self.altitude_calc.set_baseline(

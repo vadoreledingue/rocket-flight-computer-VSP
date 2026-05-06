@@ -41,15 +41,23 @@ def create_api_blueprint() -> Blueprint:
 
     @bp.route("/api/arm", methods=["POST"])
     def arm():
-        sm = current_app.config["state_machine"]
-        sm.arm()
-        return jsonify({"state": sm.state.value})
+        cfg = current_app.config["config_manager"]
+        cfg.set("arm_requested", "true")
+        db = current_app.config["db"]
+        rows = db.get_latest_readings(count=1)
+        if rows:
+            return jsonify({"status": "arm requested", "state": rows[0]["state"]})
+        return jsonify({"status": "arm requested"})
 
     @bp.route("/api/disarm", methods=["POST"])
     def disarm():
-        sm = current_app.config["state_machine"]
-        sm.disarm()
-        return jsonify({"state": sm.state.value})
+        cfg = current_app.config["config_manager"]
+        cfg.set("disarm_requested", "true")
+        db = current_app.config["db"]
+        rows = db.get_latest_readings(count=1)
+        if rows:
+            return jsonify({"status": "disarm requested", "state": rows[0]["state"]})
+        return jsonify({"status": "disarm requested"})
 
     @bp.route("/api/calibrate", methods=["POST"])
     def calibrate():
