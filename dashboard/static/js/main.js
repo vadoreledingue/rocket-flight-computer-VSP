@@ -1,4 +1,6 @@
 let attitude;
+let rocket3d = null;
+let use3D = false;
 let pollInterval;
 let altitudeChart, accelChart;
 let cameraReconnectTimer = null;
@@ -11,7 +13,7 @@ const CAMERA_RETRY_MS = 1500;
 const API_BASE = window.location.protocol + "//" + window.location.host;
 
 document.addEventListener("DOMContentLoaded", function () {
-  attitude = new AttitudeIndicator("attitude-canvas");
+  initAttitude();
   initCharts();
   startPolling();
   setInterval(updateCharts, CHART_UPDATE_MS);
@@ -25,6 +27,25 @@ document.addEventListener("DOMContentLoaded", function () {
   setInterval(pollHardware, 5000);
   setupCameraDisplay();
 });
+
+function initAttitude() {
+  // Try to initialize 3D visualization first
+  try {
+    if (typeof Rocket3D === 'undefined') {
+      throw new Error('Rocket3D class not available');
+    }
+    rocket3d = new Rocket3D('pfd-3d-container');
+    use3D = true;
+    console.log('[ATTITUDE] Using 3D visualization');
+    console.log('[ATTITUDE] 3D Status:', rocket3d.getStatus());
+  } catch (e) {
+    console.warn('[ATTITUDE] 3D initialization failed, falling back to 2D:', e.message);
+    use3D = false;
+    // Fall back to 2D attitude indicator
+    attitude = new AttitudeIndicator("attitude-canvas-2d");
+    document.getElementById("attitude-canvas-2d").style.display = 'block';
+  }
+}
 
 function startCameraDisplay() {
   const cameraImg = document.getElementById("camera-stream");
@@ -197,6 +218,28 @@ async function poll() {
     setConnectionStatus(true);
   } catch (e) {
     setConnectionStatus(false);
+    console.warn('[POLL] Error fetching status:', e.message);
+  }
+}
+
+function fallbackTo2D() {
+  console.warn('[FALLBACK] Switching to 2D attitude indicator');
+  use3D = false;
+  if (rocket3d && rocket3d.initialized) {
+    try {
+      rocket3d.destroy();
+    } catch (e) {
+      console.error('[FALLBACK] Error destroying 3D:', e);
+    }
+  }
+  // Initialize 2D if not already initialized
+  if (!attitude) {
+    try {
+      document.getElementById("attitude-canvas-2d").style.display = 'block';
+      attitude = new AttitudeIndicator("attitude-canvas-2d");
+    } catch (e) {
+      console.error('[FALLBACK] Failed to initialize 2D:', e);
+    }
   }
 }
 
@@ -214,7 +257,30 @@ function updateDashboard(d) {
   document.getElementById("vs-value").textContent =
     (vs >= 0 ? "+" : "") + vs.toFixed(1) + " m/s";
 
-  attitude.update(d.roll || 0, d.pitch || 0);
+  // Update attitude (3D or 2D)
+  if (use3D && rocket3d) {
+    // Check if 3D is still initialized (not lost)
+    if (!rocket3d.initialized) {
+      console.warn('[DASHBOARD] 3D not initialized, falling back to 2D');
+      fallbackTo2D();
+    } else {
+      try {
+        rocket3d.update(d.roll || 0, d.pitch || 0, d.yaw || 0);
+        rocket3d.updateAcceleration(d.accel_x || 0, d.accel_y || 0, d.accel_z || 0);
+      } catch (e) {
+        console.error('[DASHBOARD] 3D update failed:', e);
+        fallbackTo2D();
+      }
+    }
+  }
+
+  if (!use3D && attitude) {
+    try {
+      attitude.update(d.roll || 0, d.pitch || 0);
+    } catch (e) {
+      console.error('[DASHBOARD] 2D update failed:', e);
+    }
+  }
 
   // Environment readouts
   document.getElementById("pressure").textContent =

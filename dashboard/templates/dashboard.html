@@ -54,7 +54,8 @@
             <span id="alt-value" class="pfd-value">0 m</span>
           </div>
           <div id="attitude-container">
-            <canvas id="attitude-canvas"></canvas>
+            <div id="pfd-3d-container"></div>
+            <canvas id="attitude-canvas-2d" style="display: none;"></canvas>
           </div>
           <div id="pfd-vs" class="pfd-readout pfd-right">
             <span class="pfd-label">VS</span>
@@ -229,6 +230,8 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/gauges.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@r128/build/three.min.js"></script>
+    <script src="{{ url_for('static', filename='js/rocket3d.js') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
   </body>

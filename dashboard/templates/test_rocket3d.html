@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rocket3D Test Suite</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        background: #0a1628;
+        color: #ffffff;
+        font-family: "Courier New", monospace;
+        padding: 20px;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      h1 {
+        margin-bottom: 20px;
+        color: #00ccff;
+      }
+      .test-section {
+        background: #111d35;
+        border: 1px solid #1e3a5f;
+        border-radius: 4px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      .test-section h2 {
+        font-size: 14px;
+        color: #00ccff;
+        margin-bottom: 12px;
+        letter-spacing: 1px;
+      }
+      #pfd-3d-container {
+        width: 300px;
+        height: 300px;
+        border: 2px solid #1e3a5f;
+        border-radius: 4px;
+        background: #0d1829;
+        margin-bottom: 12px;
+      }
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 12px;
+      }
+      .control-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      label {
+        font-size: 12px;
+        color: #8899bb;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      input[type="range"],
+      button {
+        padding: 8px;
+        background: #0d1829;
+        border: 1px solid #1e3a5f;
+        color: #00ccff;
+        font-family: "Courier New", monospace;
+        border-radius: 3px;
+        cursor: pointer;
+      }
+      button {
+        background: #003366;
+        border-color: #00ccff;
+        transition: all 0.2s;
+      }
+      button:hover {
+        background: #004488;
+        color: #ffffff;
+      }
+      .status {
+        font-size: 12px;
+        line-height: 1.6;
+        margin-top: 12px;
+        padding: 8px;
+        background: #0a1628;
+        border-left: 3px solid #00ccff;
+      }
+      .status-ok {
+        border-left-color: #00ff88;
+        color: #00ff88;
+      }
+      .status-error {
+        border-left-color: #ff3344;
+        color: #ff3344;
+      }
+      .values {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 8px;
+        margin-top: 12px;
+      }
+      .value-display {
+        padding: 8px;
+        background: #0a1628;
+        border: 1px solid #1e3a5f;
+        border-radius: 3px;
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🚀 Rocket3D Visualization Test Suite</h1>
+
+      <div class="test-section">
+        <h2>3D VISUALIZATION CONTAINER</h2>
+        <div id="pfd-3d-container"></div>
+        <div class="status" id="status">Loading Three.js and Rocket3D...</div>
+      </div>
+
+      <div class="test-section">
+        <h2>ATTITUDE CONTROLS</h2>
+        <div class="controls">
+          <div class="control-group">
+            <label>Roll (°)</label>
+            <input
+              type="range"
+              id="rollInput"
+              min="-180"
+              max="180"
+              value="0"
+              step="5"
+            />
+            <span id="rollValue">0°</span>
+          </div>
+          <div class="control-group">
+            <label>Pitch (°)</label>
+            <input
+              type="range"
+              id="pitchInput"
+              min="-90"
+              max="90"
+              value="0"
+              step="5"
+            />
+            <span id="pitchValue">0°</span>
+          </div>
+          <div class="control-group">
+            <label>Yaw (°)</label>
+            <input
+              type="range"
+              id="yawInput"
+              min="-180"
+              max="180"
+              value="0"
+              step="5"
+            />
+            <span id="yawValue">0°</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>ACCELERATION CONTROLS (m/s²)</h2>
+        <div class="controls">
+          <div class="control-group">
+            <label>Accel X (Red)</label>
+            <input
+              type="range"
+              id="accelXInput"
+              min="-40"
+              max="40"
+              value="0"
+              step="2"
+            />
+            <span id="accelXValue">0 m/s²</span>
+          </div>
+          <div class="control-group">
+            <label>Accel Y (Green)</label>
+            <input
+              type="range"
+              id="accelYInput"
+              min="-40"
+              max="40"
+              value="0"
+              step="2"
+            />
+            <span id="accelYValue">0 m/s²</span>
+          </div>
+          <div class="control-group">
+            <label>Accel Z (Blue)</label>
+            <input
+              type="range"
+              id="accelZInput"
+              min="-40"
+              max="40"
+              value="0"
+              step="2"
+            />
+            <span id="accelZValue">0 m/s²</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>TEST SCENARIOS</h2>
+        <div class="controls">
+          <button onclick="testRoll()">Test Roll: ±45°</button>
+          <button onclick="testPitch()">Test Pitch: ±45°</button>
+          <button onclick="testSpin()">Test Spin: Full Rotation</button>
+          <button onclick="testAccel()">Test Accel: X+20 m/s²</button>
+          <button onclick="resetAll()">Reset All</button>
+        </div>
+      </div>
+
+      <div class="test-section">
+        <h2>CURRENT VALUES</h2>
+        <div class="values" id="values">
+          <div class="value-display">
+            Roll: <span id="displayRoll">0°</span>
+          </div>
+          <div class="value-display">
+            Pitch: <span id="displayPitch">0°</span>
+          </div>
+          <div class="value-display">Yaw: <span id="displayYaw">0°</span></div>
+          <div class="value-display">
+            Accel X: <span id="displayAccelX">0 m/s²</span>
+          </div>
+          <div class="value-display">
+            Accel Y: <span id="displayAccelY">0 m/s²</span>
+          </div>
+          <div class="value-display">
+            Accel Z: <span id="displayAccelZ">0 m/s²</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@r128/build/three.min.js"></script>
+    <script src="../static/js/rocket3d.js"></script>
+    <script>
+      let rocket3d = null;
+
+      // Initialize
+      window.addEventListener("DOMContentLoaded", function () {
+        initRocket3D();
+        setupControls();
+      });
+
+      function initRocket3D() {
+        try {
+          rocket3d = new Rocket3D("pfd-3d-container");
+          updateStatus("✓ Rocket3D initialized successfully", "status-ok");
+          console.log("[TEST] Rocket3D Status:", rocket3d.getStatus());
+        } catch (e) {
+          updateStatus(
+            "✗ Failed to initialize Rocket3D: " + e.message,
+            "status-error",
+          );
+          console.error("[TEST] Initialization failed:", e);
+        }
+      }
+
+      function setupControls() {
+        document
+          .getElementById("rollInput")
+          .addEventListener("input", updateFromControls);
+        document
+          .getElementById("pitchInput")
+          .addEventListener("input", updateFromControls);
+        document
+          .getElementById("yawInput")
+          .addEventListener("input", updateFromControls);
+        document
+          .getElementById("accelXInput")
+          .addEventListener("input", updateFromControls);
+        document
+          .getElementById("accelYInput")
+          .addEventListener("input", updateFromControls);
+        document
+          .getElementById("accelZInput")
+          .addEventListener("input", updateFromControls);
+      }
+
+      function updateFromControls() {
+        const roll = parseFloat(document.getElementById("rollInput").value);
+        const pitch = parseFloat(document.getElementById("pitchInput").value);
+        const yaw = parseFloat(document.getElementById("yawInput").value);
+        const accelX = parseFloat(document.getElementById("accelXInput").value);
+        const accelY = parseFloat(document.getElementById("accelYInput").value);
+        const accelZ = parseFloat(document.getElementById("accelZInput").value);
+
+        // Update display values
+        document.getElementById("rollValue").textContent = roll + "°";
+        document.getElementById("pitchValue").textContent = pitch + "°";
+        document.getElementById("yawValue").textContent = yaw + "°";
+        document.getElementById("accelXValue").textContent = accelX + " m/s²";
+        document.getElementById("accelYValue").textContent = accelY + " m/s²";
+        document.getElementById("accelZValue").textContent = accelZ + " m/s²";
+
+        document.getElementById("displayRoll").textContent = roll + "°";
+        document.getElementById("displayPitch").textContent = pitch + "°";
+        document.getElementById("displayYaw").textContent = yaw + "°";
+        document.getElementById("displayAccelX").textContent = accelX + " m/s²";
+        document.getElementById("displayAccelY").textContent = accelY + " m/s²";
+        document.getElementById("displayAccelZ").textContent = accelZ + " m/s²";
+
+        // Update 3D
+        if (rocket3d && rocket3d.initialized) {
+          try {
+            rocket3d.update(roll, pitch, yaw);
+            rocket3d.updateAcceleration(accelX, accelY, accelZ);
+          } catch (e) {
+            updateStatus("✗ 3D update failed: " + e.message, "status-error");
+            console.error("[TEST] Update failed:", e);
+          }
+        }
+      }
+
+      function testRoll() {
+        const roll = Math.sin(Date.now() / 1000) * 45;
+        document.getElementById("rollInput").value = roll;
+        updateFromControls();
+      }
+
+      function testPitch() {
+        const pitch = Math.sin(Date.now() / 1000) * 45;
+        document.getElementById("pitchInput").value = pitch;
+        updateFromControls();
+      }
+
+      function testSpin() {
+        const yaw = ((Date.now() / 10) % 360) - 180;
+        document.getElementById("yawInput").value = yaw;
+        updateFromControls();
+      }
+
+      function testAccel() {
+        document.getElementById("accelXInput").value = 20;
+        document.getElementById("accelYInput").value = 0;
+        document.getElementById("accelZInput").value = 0;
+        updateFromControls();
+      }
+
+      function resetAll() {
+        document.getElementById("rollInput").value = 0;
+        document.getElementById("pitchInput").value = 0;
+        document.getElementById("yawInput").value = 0;
+        document.getElementById("accelXInput").value = 0;
+        document.getElementById("accelYInput").value = 0;
+        document.getElementById("accelZInput").value = 0;
+        updateFromControls();
+      }
+
+      function updateStatus(message, className) {
+        const status = document.getElementById("status");
+        status.textContent = message;
+        status.className = "status " + (className || "");
+      }
+    </script>
+  </body>
+</html>

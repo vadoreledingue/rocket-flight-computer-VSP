@@ -78,7 +78,8 @@ body {
     padding: 6px 12px; border-radius: 3px; white-space: nowrap;
     min-width: 120px; text-align: center;
 }
-#attitude-canvas { border-radius: 50%; border: 2px solid var(--border); width: 300px; height: 300px; }
+#attitude-canvas-2d { border-radius: 50%; border: 2px solid var(--border); width: 300px; height: 300px; }
+#pfd-3d-container { border: 2px solid var(--border); border-radius: 4px; width: 300px; height: 300px; background: var(--bg-instrument); }
 
 /* IMU panel */
 #imu-panel { align-items: stretch; }
