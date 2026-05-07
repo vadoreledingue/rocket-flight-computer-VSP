@@ -1,5 +1,6 @@
 from typing import Optional
 import math
+import sys
 
 
 class MPU6050Sensor:
@@ -15,9 +16,13 @@ class MPU6050Sensor:
     """
 
     def __init__(self) -> None:
-        # Try to initialize the Adafruit driver first. If it fails (e.g. unexpected
-        # WHO_AM_I value for this device variant), fall back to a direct SMBus
-        # implementation reading registers manually.
+        self._device = None
+        self._fallback = False
+        self._bus = None
+        self._addr = 0x68
+        self._initialized = False
+        self._init_error: Optional[str] = None
+
         try:
             import board
             import busio
@@ -25,14 +30,25 @@ class MPU6050Sensor:
             i2c = busio.I2C(board.SCL, board.SDA)
             self._device = adafruit_mpu6050.MPU6050(i2c)
             self._fallback = False
-            self._bus = None
-        except Exception:
-            # Fallback: use smbus2 to read registers directly
-            from smbus2 import SMBus
-            self._device = None
-            self._fallback = True
-            self._bus = SMBus(1)
-            self._addr = 0x68
+            self._initialized = True
+            print("[MPU6050] Initialized via Adafruit driver", file=sys.stderr)
+        except Exception as e:
+            adafruit_error = str(e)
+            try:
+                from smbus2 import SMBus
+                self._bus = SMBus(1)
+                self._device = None
+                self._fallback = True
+                self._initialized = True
+                print(
+                    f"[MPU6050] Adafruit failed ({adafruit_error}), using SMBus fallback", file=sys.stderr)
+            except Exception as smbus_err:
+                self._device = None
+                self._bus = None
+                self._initialized = False
+                self._init_error = f"Adafruit: {adafruit_error}; SMBus: {str(smbus_err)}"
+                print(
+                    f"[MPU6050] ERROR: Failed to initialize sensor: {self._init_error}", file=sys.stderr)
 
     def _compute_pitch_roll(self, accel: tuple) -> tuple:
         """Compute pitch and roll from accelerometer data.
@@ -49,11 +65,20 @@ class MPU6050Sensor:
         return pitch, roll
 
     def read(self) -> Optional[dict]:
+        if not self._initialized:
+            if self._init_error and not hasattr(self, '_logged_init_error'):
+                print(
+                    f"[MPU6050] Cannot read: {self._init_error}", file=sys.stderr)
+                self._logged_init_error = True
+            return None
+
         try:
             if not self._fallback and self._device is not None:
                 accel = self._device.acceleration
                 gyro = self._device.gyro
                 if accel is None or gyro is None:
+                    print(
+                        "[MPU6050] WARNING: Adafruit driver returned None", file=sys.stderr)
                     return None
                 pitch, roll = self._compute_pitch_roll(accel)
                 return {
@@ -68,9 +93,7 @@ class MPU6050Sensor:
                     "gyro_z": gyro[2],
                 }
 
-            # SMBus fallback: read raw registers and convert
             if self._fallback and self._bus is not None:
-                # Read 6 accel bytes starting at 0x3B and 6 gyro bytes at 0x43
                 def read_word(reg):
                     hi = self._bus.read_byte_data(self._addr, reg)
                     lo = self._bus.read_byte_data(self._addr, reg + 1)
@@ -86,8 +109,6 @@ class MPU6050Sensor:
                 gy = read_word(0x45)
                 gz = read_word(0x47)
 
-                # Convert raw values to physical units.
-                # Assuming default FS: accel +/-2g -> 16384 LSB/g; gyro +/-250 dps -> 131 LSB/(deg/s)
                 accel_x = ax / 16384.0
                 accel_y = ay / 16384.0
                 accel_z = az / 16384.0
@@ -110,6 +131,16 @@ class MPU6050Sensor:
                     "gyro_z": gyro_z,
                 }
 
+            print(
+                "[MPU6050] ERROR: Sensor not properly initialized (no device or bus)", file=sys.stderr)
             return None
-        except (OSError, ValueError, Exception):
+        except OSError as e:
+            print(f"[MPU6050] I2C OSError during read: {e}", file=sys.stderr)
+            return None
+        except ValueError as e:
+            print(f"[MPU6050] ValueError during read: {e}", file=sys.stderr)
+            return None
+        except Exception as e:
+            print(
+                f"[MPU6050] Unexpected error during read: {type(e).__name__}: {e}", file=sys.stderr)
             return None

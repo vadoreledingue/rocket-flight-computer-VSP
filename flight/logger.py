@@ -17,7 +17,7 @@ class FlightLogger:
             timestamp=timestamp,
             pressure=sensor_data.get("pressure", 0.0),
             temperature=sensor_data.get("temperature", 0.0),
-            humidity=sensor_data.get("humidity"),
+            humidity=sensor_data.get("humidity", 0.0),
             altitude=sensor_data.get("altitude", 0.0),
             vspeed=sensor_data.get("vspeed", 0.0),
             roll=sensor_data.get("roll", 0.0),

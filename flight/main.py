@@ -39,7 +39,12 @@ class FlightController:
             from flight.sensors.mpu6050 import MPU6050Sensor
             try:
                 self._mpu6050 = MPU6050Sensor()
-            except Exception:
+                if not self._mpu6050._initialized:
+                    print(
+                        f"[FLIGHT] WARNING: MPU6050 failed to initialize: {self._mpu6050._init_error}", file=sys.stderr)
+            except Exception as e:
+                print(
+                    f"[FLIGHT] ERROR: Failed to create MPU6050 instance: {e}", file=sys.stderr)
                 self._mpu6050 = None
         if self._pwr is None:
             from flight.sensors.power import PowerSensor
@@ -149,6 +154,8 @@ class FlightController:
 
     def run(self) -> None:
         self._init_sensors()
+        print(
+            f"[FLIGHT] Sensors initialized: BMP280={self._bmp280 is not None}, MPU6050={self._mpu6050 is not None and self._mpu6050._initialized}, Power={self._pwr is not None}", file=sys.stderr)
         self._running = True
 
         def stop(sig, frame):
