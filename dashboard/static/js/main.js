@@ -265,6 +265,22 @@ function updateDashboard(d) {
     ? d.accel_z.toFixed(2) + " m/s² (" + (d.accel_z / 9.81).toFixed(2) + "g)"
     : "--";
 
+  if (hasImu) {
+    const ax = d.accel_x || 0;
+    const ay = d.accel_y || 0;
+    const az = d.accel_z || 0;
+    const totalMag = Math.sqrt(ax * ax + ay * ay + az * az);
+    const netMag = Math.max(0, totalMag - 9.81);
+
+    document.getElementById("imu-total").textContent =
+      totalMag.toFixed(2) + " m/s² (" + (totalMag / 9.81).toFixed(2) + "g)";
+    document.getElementById("imu-net").textContent =
+      netMag.toFixed(2) + " m/s² (" + (netMag / 9.81).toFixed(2) + "g)";
+  } else {
+    document.getElementById("imu-total").textContent = "--";
+    document.getElementById("imu-net").textContent = "--";
+  }
+
   // Button states
   var isIdle = state === "IDLE";
   var isArmed = state === "ARMED";

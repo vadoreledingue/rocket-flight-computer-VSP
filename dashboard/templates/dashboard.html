@@ -91,6 +91,15 @@
             <span class="label">Accel Z</span>
             <span id="imu-az" class="value">--</span>
           </div>
+          <div class="imu-separator"></div>
+          <div class="readout-row">
+            <span class="label">Total Accel</span>
+            <span id="imu-total" class="value">--</span>
+          </div>
+          <div class="readout-row">
+            <span class="label">Net Accel</span>
+            <span id="imu-net" class="value">--</span>
+          </div>
         </div>
       </section>
       <section id="graphs" class="instrument-panel">
@@ -107,14 +116,32 @@
 
       <section id="camera-panel" class="instrument-panel" style="display: none">
         <h2>CAMERA STREAM</h2>
-        <div id="camera-stream-container" style="text-align: center; min-height: 400px; display: flex; align-items: center; justify-content: center; background: #0a0a0a;">
-          <div id="camera-stream-status" style="color: #0ff; font-size: 0.95rem; letter-spacing: 0.08em;">
+        <div
+          id="camera-stream-container"
+          style="
+            text-align: center;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0a0a0a;
+          "
+        >
+          <div
+            id="camera-stream-status"
+            style="color: #0ff; font-size: 0.95rem; letter-spacing: 0.08em"
+          >
             Camera inactive
           </div>
           <img
             id="camera-stream"
             alt="Camera MJPEG stream"
-            style="display: none; max-width: 100%; max-height: 600px; border: 2px solid #0ff;"
+            style="
+              display: none;
+              max-width: 100%;
+              max-height: 600px;
+              border: 2px solid #0ff;
+            "
           />
         </div>
       </section>
