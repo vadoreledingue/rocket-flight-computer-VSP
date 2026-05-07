@@ -33,7 +33,9 @@ Successfully implemented a **real-time 3D rocket visualization** for the Rocket 
 ## Files Modified
 
 ### 1. `dashboard/templates/dashboard.html`
+
 **Changes:**
+
 - Added Three.js CDN script: `https://cdn.jsdelivr.net/npm/three@r128/build/three.min.js`
 - Added rocket3d.js script loading (between gauges.js and chart.js)
 - Replaced `<canvas id="attitude-canvas">` with `<div id="pfd-3d-container">`
@@ -41,7 +43,9 @@ Successfully implemented a **real-time 3D rocket visualization** for the Rocket 
 - **Impact**: Zero breaking changes; 2D display automatically available as fallback
 
 ### 2. `dashboard/static/js/main.js`
+
 **Changes:**
+
 - Added global variables: `rocket3d`, `use3D` (line 2-3)
 - Added `initAttitude()` function to initialize 3D or fallback to 2D (line 31-48)
 - Modified DOMContentLoaded to call `initAttitude()` instead of direct AttitudeIndicator (line 16)
@@ -54,15 +58,19 @@ Successfully implemented a **real-time 3D rocket visualization** for the Rocket 
 - **Impact**: Seamless 3D integration; dashboard works with or without 3D
 
 ### 3. `dashboard/static/css/cockpit.css`
+
 **Changes:**
+
 - Replaced: `#attitude-canvas { border-radius: 50%; ... }`
-- With: 
+- With:
   - `#attitude-canvas-2d { border-radius: 50%; ... }`
   - `#pfd-3d-container { border: 2px solid ...; border-radius: 4px; width: 300px; height: 300px; ... }`
 - **Impact**: Maintains 300×300 display area; square container for 3D scene
 
 ### 4. `CLAUDE.md`
+
 **Changes:**
+
 - Added Three.js r128 to Tech Stack
 - Added comprehensive "3D Visualization (PRIMARY FLIGHT DISPLAY)" section:
   - Architecture overview
@@ -94,21 +102,25 @@ class Rocket3D {
 ### 3D Scene Setup
 
 **Geometry:**
+
 - Rocket mesh: BoxGeometry(2, 0.5, 0.3) - aspect ratio L:W:H = 2:0.5:0.3
 - Material: MeshPhongMaterial, cyan color (#00ccff)
 - Shadows: Enabled for depth perception
 
 **Lighting:**
+
 - Ambient: 0.6 intensity (base illumination)
 - Directional: 0.8 intensity from (3, 4, 3)
 - Shadows: PCF shadow mapping for smooth falloff
 
 **Camera:**
+
 - PerspectiveCamera, FOV 50°
 - Position: (2, 2, 2) for isometric view
 - Aspect ratio: Responsive to container
 
 **Acceleration Arrows:**
+
 - Three ArrowHelpers (one per axis)
 - Colors: X=red(0xFF0000), Y=green(0x00FF00), Z=blue(0x0000FF)
 - Length scaling: `min(|accel| / 20, 2.0)` → 20 m/s² = arrow length 1.0
@@ -117,16 +129,19 @@ class Rocket3D {
 ### Data Binding
 
 **Update Frequency:**
+
 - Polling: Every 500ms (POLL_MS constant in main.js)
 - Rendering: Uncoupled, at browser frame rate (~60 FPS)
 - Latency: < 1 second (acceptable for ballistic trajectory)
 
 **Data Source:**
+
 - `/api/status` endpoint returns latest reading
 - Fields used: `roll`, `pitch`, `yaw`, `accel_x`, `accel_y`, `accel_z`
 - All available in single query (no joins needed)
 
 **Angle Convention:**
+
 - Input: Degrees (MPU-6050 output)
 - Conversion: `angle_radians = angle_degrees * (π/180)`
 - Rotation order: YXZ (yaw, pitch, roll) for proper flight dynamics
@@ -142,6 +157,7 @@ class Rocket3D {
 5. **Runtime errors during update** → Caught in `updateDashboard()` → Fall back via `fallbackTo2D()`
 
 **Fallback Path:**
+
 ```
 3D initialization fails
   ↓
@@ -157,12 +173,14 @@ User sees functional 2D display
 ### Performance Optimization
 
 **Memory Footprint:**
+
 - Three.js library: ~150 KB (CDN)
 - Rocket3D module: ~6 KB (rocket3d.js)
 - Scene data: <10 KB (mesh, lights, camera)
 - **Total**: <200 KB loaded
 
 **Rendering:**
+
 - No textures (flat colors only)
 - No custom shaders (built-in materials)
 - Single BoxGeometry (minimal vertex data)
@@ -170,6 +188,7 @@ User sees functional 2D display
 - Target frame rate: 30+ FPS on Pi Zero 2W
 
 **Update Optimization:**
+
 - Data updates only on polling (500ms)
 - Scene rendering continuous (no-op if no update)
 - No per-frame recalculation of geometry
@@ -184,6 +203,7 @@ User sees functional 2D display
 **Location:** `dashboard/templates/test_rocket3d.html`
 
 **Features:**
+
 - Standalone test page (no Flask needed)
 - Interactive sliders for roll/pitch/yaw (±180°, ±90°)
 - Interactive sliders for accelerations (±40 m/s²)
@@ -192,6 +212,7 @@ User sees functional 2D display
 - Status indicator (OK/ERROR)
 
 **Usage:**
+
 ```bash
 # Run Flask development server
 python -m flask --app dashboard.app run --host 0.0.0.0 --port 8080
@@ -219,6 +240,7 @@ http://localhost:8080/templates/test_rocket3d.html
 ### Performance Baselines
 
 **Expected on Pi Zero 2W:**
+
 - 3D render: 30-60 FPS (depends on browser optimization)
 - Memory overhead: <50 MB additional
 - CPU impact: <10% idle, <30% during flight
@@ -228,6 +250,7 @@ http://localhost:8080/templates/test_rocket3d.html
 ## Breaking Changes
 
 **None.** The implementation is fully backward compatible:
+
 - Old 2D canvas still available as fallback
 - Existing API endpoints unchanged
 - No database schema modifications
@@ -279,6 +302,7 @@ http://localhost:8080/templates/test_rocket3d.html
 ## Code Quality
 
 **JavaScript Standards:**
+
 - Vanilla JS (no frameworks)
 - Proper error handling (try/catch blocks)
 - Console logging for debugging
@@ -286,12 +310,14 @@ http://localhost:8080/templates/test_rocket3d.html
 - No external dependencies beyond Three.js CDN
 
 **CSS Standards:**
+
 - Follows existing cockpit theme
 - CSS variables for colors
 - Responsive to container size
 - No breaking style changes
 
 **Documentation:**
+
 - CLAUDE.md updated with full architecture
 - Code comments for maintainability
 - Test suite provided
@@ -302,12 +328,14 @@ http://localhost:8080/templates/test_rocket3d.html
 ## Support & Debugging
 
 **Enable debug logging:**
+
 ```javascript
 // Browser console
-localStorage.debug = '*';  // Enable all logs
+localStorage.debug = "*"; // Enable all logs
 ```
 
 **Check 3D status:**
+
 ```javascript
 // Browser console
 console.log(rocket3d.getStatus());
@@ -315,6 +343,7 @@ console.log(rocket3d.getStatus());
 ```
 
 **Force fallback:**
+
 ```javascript
 // Browser console
 use3D = false;
@@ -322,9 +351,10 @@ fallbackTo2D();
 ```
 
 **Monitor 3D updates:**
+
 ```javascript
 // Browser console
-setInterval(() => console.log('3D Status:', rocket3d.initialized), 1000);
+setInterval(() => console.log("3D Status:", rocket3d.initialized), 1000);
 ```
 
 ---
@@ -334,6 +364,7 @@ setInterval(() => console.log('3D Status:', rocket3d.initialized), 1000);
 ✅ **Implementation complete and tested**
 
 The 3D rocket visualization is now integrated into the dashboard with:
+
 - Real-time sensor data binding
 - Automatic graceful fallback
 - Full backward compatibility
@@ -342,4 +373,3 @@ The 3D rocket visualization is now integrated into the dashboard with:
 - Test suite for validation
 
 Ready for deployment. 🚀
-

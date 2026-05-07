@@ -17,7 +17,7 @@ A **real-time 3D visualization** of the rocket's attitude and acceleration that 
 ✅ **Acceleration Arrows**: RGB arrows (X/Y/Z) that scale with sensor acceleration  
 ✅ **Smart Fallback**: Auto-switches to 2D canvas if 3D fails  
 ✅ **Pi Zero 2W Optimized**: <200KB memory, 30+ FPS target  
-✅ **Zero Breaking Changes**: Dashboard works with or without 3D  
+✅ **Zero Breaking Changes**: Dashboard works with or without 3D
 
 ---
 
@@ -25,20 +25,20 @@ A **real-time 3D visualization** of the rocket's attitude and acceleration that 
 
 ### New Files Created
 
-| File | Purpose |
-|------|---------|
-| `dashboard/static/js/rocket3d.js` | Three.js 3D visualization module (210 lines) |
-| `dashboard/templates/test_rocket3d.html` | Standalone test suite for validation |
-| `IMPLEMENTATION_SUMMARY.md` | Complete technical documentation |
+| File                                     | Purpose                                      |
+| ---------------------------------------- | -------------------------------------------- |
+| `dashboard/static/js/rocket3d.js`        | Three.js 3D visualization module (210 lines) |
+| `dashboard/templates/test_rocket3d.html` | Standalone test suite for validation         |
+| `IMPLEMENTATION_SUMMARY.md`              | Complete technical documentation             |
 
 ### Files Modified
 
-| File | Changes |
-|------|---------|
+| File                                 | Changes                                                    |
+| ------------------------------------ | ---------------------------------------------------------- |
 | `dashboard/templates/dashboard.html` | Added Three.js CDN + rocket3d.js; replaced canvas with div |
-| `dashboard/static/js/main.js` | Added 3D initialization, data binding, and fallback logic |
-| `dashboard/static/css/cockpit.css` | Updated container styling for 3D scene |
-| `CLAUDE.md` | Added comprehensive 3D documentation section |
+| `dashboard/static/js/main.js`        | Added 3D initialization, data binding, and fallback logic  |
+| `dashboard/static/css/cockpit.css`   | Updated container styling for 3D scene                     |
+| `CLAUDE.md`                          | Added comprehensive 3D documentation section               |
 
 ---
 
@@ -106,8 +106,8 @@ console.log(rocket3d.getStatus());
 // Output: { initialized: true, hasWebGL: true, containerSize: { width: 300, height: 300 } }
 
 // Manual 3D test
-rocket3d.update(30, 45, 0);  // 30° pitch, 45° roll, 0° yaw
-rocket3d.updateAcceleration(5, 10, 20);  // 5, 10, 20 m/s² accelerations
+rocket3d.update(30, 45, 0); // 30° pitch, 45° roll, 0° yaw
+rocket3d.updateAcceleration(5, 10, 20); // 5, 10, 20 m/s² accelerations
 
 // Force fallback to 2D
 use3D = false;
@@ -158,6 +158,7 @@ http://rocket-pi.local:8080
 ## Graceful Fallback (Automatic)
 
 If **any** of these happens:
+
 - Three.js CDN unreachable
 - Browser lacks WebGL support
 - WebGL context lost during runtime
@@ -179,16 +180,19 @@ fallbackTo2D();
 ## Performance Targets
 
 ### Memory
+
 - **Three.js library**: 150 KB (CDN)
 - **Rocket3D scene**: <10 KB
 - **Total overhead**: <200 KB
 
 ### CPU
+
 - **Idle rendering**: <5% (just scene rotation animation)
 - **During flight**: <30% (sensor updates + rendering)
 - **Target device**: Pi Zero 2W (2×1.0 GHz ARM)
 
 ### Frame Rate
+
 - **3D rendering**: Target 30-60 FPS
 - **Data polling**: 500ms (2 Hz) - independent of render loop
 - **Fallback (2D)**: 60 FPS (lighter weight)
@@ -198,12 +202,14 @@ fallbackTo2D();
 ## Known Limitations & Workarounds
 
 ### Limitation: Yaw always 0.0
+
 **Reason**: MPU-6050 has no magnetometer; gyro integration not implemented  
 **Impact**: 3D rocket rotates around Z-axis correctly but always at 0° yaw  
 **Workaround**: Reserve yaw axis for future magnetometer integration  
 **Timeline**: Implement when 3-axis magnetometer added to hardware
 
 ### Limitation: Arrows may clip through rocket at extreme angles
+
 **Reason**: Arrow origins at rocket center; extreme accelerations + extreme angles cause visual overlap  
 **Impact**: Minor visual artifacts at 40+ m/s² + extreme pitch/roll  
 **Workaround**: Arrow scaling and visibility thresholds designed to minimize  
@@ -218,7 +224,7 @@ fallbackTo2D();
 ```javascript
 // Browser console
 // Set localStorage to enable verbose logging
-localStorage.debug = '*';
+localStorage.debug = "*";
 // Reload page
 
 // Check browser console for [ATTITUDE], [ROCKET3D], [DASHBOARD] messages
@@ -226,23 +232,24 @@ localStorage.debug = '*';
 
 ### Common Issues & Solutions
 
-| Issue | Symptom | Solution |
-|-------|---------|----------|
-| **3D not visible** | Blank area where rocket should be | Check browser console for errors; try fallback (`use3D = false`) |
-| **Rocket doesn't rotate** | 3D model stuck in one position | Verify `/api/status` returns roll/pitch/yaw values |
-| **Arrows never appear** | Red/green/blue arrows not visible | Check acceleration values in IMU panel; must be > 0.3 m/s² |
-| **Black screen on Pi** | Dashboard loads but no display | Check GPU acceleration enabled; test on development machine first |
-| **High CPU on Pi** | System becomes sluggish | Fallback to 2D: `fallbackTo2D()` |
+| Issue                     | Symptom                           | Solution                                                          |
+| ------------------------- | --------------------------------- | ----------------------------------------------------------------- |
+| **3D not visible**        | Blank area where rocket should be | Check browser console for errors; try fallback (`use3D = false`)  |
+| **Rocket doesn't rotate** | 3D model stuck in one position    | Verify `/api/status` returns roll/pitch/yaw values                |
+| **Arrows never appear**   | Red/green/blue arrows not visible | Check acceleration values in IMU panel; must be > 0.3 m/s²        |
+| **Black screen on Pi**    | Dashboard loads but no display    | Check GPU acceleration enabled; test on development machine first |
+| **High CPU on Pi**        | System becomes sluggish           | Fallback to 2D: `fallbackTo2D()`                                  |
 
 ### Check WebGL Capabilities
 
 ```javascript
 // Browser console
-const canvas = document.createElement('canvas');
-const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-console.log('WebGL supported:', !!gl);
-console.log('Vendor:', gl.getParameter(gl.VENDOR));
-console.log('Renderer:', gl.getParameter(gl.RENDERER));
+const canvas = document.createElement("canvas");
+const gl =
+  canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+console.log("WebGL supported:", !!gl);
+console.log("Vendor:", gl.getParameter(gl.VENDOR));
+console.log("Renderer:", gl.getParameter(gl.RENDERER));
 ```
 
 ---
@@ -276,17 +283,20 @@ rocket-flight-computer-VSP/
 ## Next Steps
 
 ### Immediate (Development)
+
 1. ✅ Test on development machine (`test_rocket3d.html`)
 2. ✅ Verify dashboard still works (2D fallback)
 3. ✅ Check browser console for errors
 
 ### Short-term (Integration)
+
 1. Deploy to Pi Zero 2W
 2. Run flight test (if available)
 3. Monitor performance (CPU, memory, frame rate)
 4. Adjust arrow scaling if needed
 
 ### Future (Enhancements)
+
 1. **Magnetometer integration**: Enable true yaw display
 2. **LOD system**: Auto-degrade mesh at low frame rates
 3. **Trajectory visualization**: Draw rocket path during flight
@@ -298,17 +308,20 @@ rocket-flight-computer-VSP/
 ## Support & Questions
 
 **For debugging**, check:
+
 1. Browser console (F12) for JavaScript errors
 2. Flask server logs for API errors
 3. `/api/status` endpoint returns expected data
 4. Network tab shows data updating every 500ms
 
 **For fallback**, simply call:
+
 ```javascript
 fallbackTo2D();
 ```
 
 **For rollback** (if issues):
+
 ```bash
 git revert HEAD~7  # Undo last 7 commits (implementation)
 # Or restore from git stash if needed
@@ -345,4 +358,3 @@ git revert HEAD~7  # Undo last 7 commits (implementation)
 ---
 
 **Enjoy your 3D rocket visualization! 🚀**
-

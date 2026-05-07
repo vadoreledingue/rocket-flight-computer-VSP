@@ -33,17 +33,25 @@ class Rocket3D {
     this.scene.background = new THREE.Color(0x0a1628); // Match dashboard dark theme
 
     // Camera setup: isometric-ish view
-    const width = this.container.clientWidth;
-    const height = this.container.clientHeight;
+    let width = this.container.clientWidth || 300;
+    let height = this.container.clientHeight || 300;
+
+    if (width === 0) width = 300;
+    if (height === 0) height = 300;
+
     const fov = 50;
     this.camera = new THREE.PerspectiveCamera(fov, width / height, 0.1, 1000);
     this.camera.position.set(2, 2, 2);
     this.camera.lookAt(0, 0, 0);
 
     // Renderer setup with WebGL 1.0 support
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+    try {
+      this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false, preserveDrawingBuffer: true });
+    } catch (e) {
+      this.renderer = new THREE.WebGLRenderer({ antialias: false, alpha: false });
+    }
     this.renderer.setSize(width, height);
-    this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowShadowMap;
     this.container.appendChild(this.renderer.domElement);
@@ -179,33 +187,9 @@ class Rocket3D {
 
     arrow.visible = true;
 
-    // Update arrow direction and length
-    const direction = accelValue >= 0 ? 1 : -1;
-    let axisVector;
-
-    if (axis === "x") {
-      axisVector = new THREE.Vector3(direction, 0, 0);
-    } else if (axis === "y") {
-      axisVector = new THREE.Vector3(0, direction, 0);
-    } else {
-      axisVector = new THREE.Vector3(0, 0, direction);
-    }
-
-    // Update arrow: must remove and recreate to change direction on ArrowHelper
-    this.scene.remove(arrow);
-
-    const arrowHeadSize = 0.15;
-    const newArrow = new THREE.ArrowHelper(
-      axisVector,
-      new THREE.Vector3(0, 0, 0),
-      length,
-      arrow.line.material.color,
-      arrowHeadSize,
-      arrowHeadSize * 0.6,
-    );
-    newArrow.visible = true;
-    this.scene.add(newArrow);
-    this.arrows[axis] = newArrow;
+    // Simple: just scale the arrow based on magnitude
+    const scale = Math.max(0.2, Math.min(length, maxLen));
+    arrow.scale.set(scale, scale, scale);
   }
 
   _animate() {
