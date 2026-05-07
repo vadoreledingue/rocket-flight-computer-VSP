@@ -20,6 +20,8 @@ class ConfigManager:
     Configuration is mutable at runtime without restarting flight controller.
     Default values are initialized once on first startup.
     """
+
+    def __init__(self, db: FlightDB) -> None:
         self._db = db
         self._cache: dict[str, Any] = {}
         self._init_defaults()
