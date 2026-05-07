@@ -15,6 +15,13 @@ class FlightState(Enum):
     - LANDED: Flight complete, safe state
     """
 
+    IDLE = "IDLE"
+    ARMED = "ARMED"
+    ASCENT = "ASCENT"
+    APOGEE = "APOGEE"
+    DESCENT = "DESCENT"
+    LANDED = "LANDED"
+
 
 class StateMachine:
     def __init__(self, apogee_samples: int = 5,
