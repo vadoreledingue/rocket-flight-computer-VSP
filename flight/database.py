@@ -7,6 +7,18 @@ SCHEMA_PATH = Path(__file__).parent.parent / "db" / "schema.sql"
 
 
 class FlightDB:
+    """SQLite wrapper for flight data persistence.
+
+    Tables:
+    - readings: One row per sensor sample (100+ rows/sec during flight)
+    - flights: One row per completed flight (metadata + summary stats)
+    - config: Live configuration (key-value store, 1-second reload)
+    - battery_tests: Battery capacity test records (optional feature)
+
+    Uses WAL mode for concurrent reader/writer access.
+    All timestamps are Unix epoch except flight metadata (ISO 8601).
+    """
+
     def __init__(self, db_path: str = "/opt/rocket/data/rocket.db") -> None:
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row

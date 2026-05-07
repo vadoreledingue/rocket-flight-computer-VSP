@@ -19,7 +19,15 @@ DEFAULT_FRAME_FILE = "/dev/shm/rocket_camera_frame.jpg"
 
 
 class CameraStreamer:
-    """Captures camera video using picamera2 for MJPEG streaming + H.264 recording."""
+    """Captures camera video using picamera2 for simultaneous recording and streaming.
+
+    Dual output mode:
+    - H.264 file: Full-quality video recording (24 fps, 2 Mbps, 1280×720)
+    - MJPEG stream: Low-bandwidth live preview (6 fps via /api/camera/stream)
+
+    Frame file is stored on RAM disk (/dev/shm/) for fast atomic writes.
+    Thread-safe: Extraction and streaming run in background thread.
+    """
 
     def __init__(self, width: int = 1280, height: int = 720, fps: int = 24,
                  video_dir: str = DEFAULT_VIDEO_DIR,

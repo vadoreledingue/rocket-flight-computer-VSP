@@ -7,13 +7,23 @@ except (ImportError, RuntimeError):
 
 
 class PowerSensor:
-    """Reads battery status from PowerBoost 1000 via LBO (Low Battery Output) pin.
+    """Reads battery status from PowerBoost 1000C via LBO (Low Battery Output) pin.
 
-    PowerBoost 1000C features:
-    - 3.7V LiPo input
-    - 5V USB output up to 1A continuous
-    - LBO pin goes LOW when battery drops below ~3.2V
-    - LED indicators for charging/power status
+    Hardware specs:
+    - Input: 3.7V LiPo (nominal 3.0–4.2V)
+    - Output: 5V USB regulated, up to 1A continuous
+    - LBO pin: Active LOW when battery voltage < ~3.2V threshold
+    - Provides binary low-battery indication only (no ADC voltage reading)
+
+    Current implementation:
+    - battery_v: Returns 3.8V (normal) or 3.2V (low)
+    - battery_pct: Returns 80% (normal) or 10% (low)
+    - battery_low: Boolean from GPIO pin state
+
+    Limitations:
+    - No precise voltage measurement (would require ADC)
+    - Percentage is a crude estimate based on LBO threshold
+    - Does not account for load variation or cell chemistry
     """
 
     def __init__(self, lbo_pin: int = 4) -> None:

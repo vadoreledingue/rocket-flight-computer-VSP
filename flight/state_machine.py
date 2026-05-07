@@ -3,12 +3,17 @@ from typing import Optional
 
 
 class FlightState(Enum):
-    IDLE = "IDLE"
-    ARMED = "ARMED"
-    ASCENT = "ASCENT"
-    APOGEE = "APOGEE"
-    DESCENT = "DESCENT"
-    LANDED = "LANDED"
+    """Six-state rocket lifecycle model.
+
+    IDLE → ARMED → ASCENT → APOGEE → DESCENT → LANDED
+
+    - IDLE: Safe default, no logging
+    - ARMED: Ready for launch, baseline pressure calibrated
+    - ASCENT: Fast climb detected (alt ≥ 5m, vspeed > 5 m/s)
+    - APOGEE: Apex reached (falling for N samples)
+    - DESCENT: Coasting down, landing detector active
+    - LANDED: Flight complete, safe state
+    """
 
 
 class StateMachine:

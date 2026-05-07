@@ -11,7 +11,15 @@ DEFAULTS: dict[str, Any] = {
 
 
 class ConfigManager:
-    def __init__(self, db: FlightDB) -> None:
+    """Live configuration store backed by SQLite.
+
+    Provides caching layer for fast reads during tight flight loop.
+    Reloaded from database every 1 second to pick up dashboard changes.
+    All values stored as JSON strings in DB, cached as Python objects.
+
+    Configuration is mutable at runtime without restarting flight controller.
+    Default values are initialized once on first startup.
+    """
         self._db = db
         self._cache: dict[str, Any] = {}
         self._init_defaults()

@@ -3,10 +3,15 @@ import math
 
 
 class MPU6050Sensor:
-    """MPU-6050 sensor (accelerometer + 3-axis gyroscope).
+    """MPU-6050 6-axis IMU sensor (accelerometer + gyroscope).
 
-    Provides raw accelerometer and gyroscope readings.
-    Euler angles (pitch/roll) are computed from accelerometer only.
+    Supports two initialization modes:
+    1. Adafruit CircuitPython driver (preferred, handles I2C communication)
+    2. SMBus fallback (direct register access if Adafruit fails)
+
+    Provides raw accelerometer (±2g) and gyroscope (±250 dps) readings.
+    Euler angles (pitch/roll) are computed from accelerometer via atan2.
+    Yaw requires gyro integration (not implemented; always 0.0).
     """
 
     def __init__(self) -> None:

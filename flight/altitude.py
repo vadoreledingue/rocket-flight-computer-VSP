@@ -3,7 +3,12 @@ from typing import Optional
 
 
 class AltitudeCalculator:
-    """Computes altitude from barometric pressure using the hypsometric formula."""
+    """Computes altitude from barometric pressure using the hypsometric formula.
+
+    Altitude is computed relative to a baseline pressure set via set_baseline().
+    Vertical speed (m/s) is derived from altitude rate of change over time.
+    History is maintained in a rolling buffer for post-flight analysis.
+    """
 
     def __init__(self, history_size: int = 50) -> None:
         self._baseline_pressure: Optional[float] = None
