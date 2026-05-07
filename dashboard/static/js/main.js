@@ -89,7 +89,6 @@ function setCameraStatus(message) {
   statusEl.style.display = message ? "block" : "none";
 }
 
-
 function startPolling() {
   poll();
   pollInterval = setInterval(poll, POLL_MS);
@@ -147,9 +146,7 @@ function initCharts() {
 
 async function fetchHistory(seconds = 60) {
   try {
-    const resp = await fetch(
-      API_BASE + "/api/history?seconds=" + seconds,
-    );
+    const resp = await fetch(API_BASE + "/api/history?seconds=" + seconds);
     if (!resp.ok) return null;
     const rows = await resp.json();
     return rows;
@@ -174,7 +171,7 @@ async function updateCharts() {
     const ax = r.accel_x || 0;
     const ay = r.accel_y || 0;
     const az = r.accel_z || 0;
-    const mag = Math.sqrt(ax * ax + ay * ay + az * az);
+    const mag = Math.sqrt(ax * ax + ay * ay + az * az) / 9.81;
     axData.push(mag);
   });
 
@@ -259,13 +256,13 @@ function updateDashboard(d) {
     ? d.yaw.toFixed(1) + "\u00B0"
     : "--";
   document.getElementById("imu-ax").textContent = hasImu
-    ? d.accel_x.toFixed(2) + " g"
+    ? d.accel_x.toFixed(2) + " m/s² (" + (d.accel_x / 9.81).toFixed(2) + "g)"
     : "--";
   document.getElementById("imu-ay").textContent = hasImu
-    ? d.accel_y.toFixed(2) + " g"
+    ? d.accel_y.toFixed(2) + " m/s² (" + (d.accel_y / 9.81).toFixed(2) + "g)"
     : "--";
   document.getElementById("imu-az").textContent = hasImu
-    ? d.accel_z.toFixed(2) + " g"
+    ? d.accel_z.toFixed(2) + " m/s² (" + (d.accel_z / 9.81).toFixed(2) + "g)"
     : "--";
 
   // Button states

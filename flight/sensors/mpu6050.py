@@ -48,14 +48,17 @@ class MPU6050Sensor:
         """Compute pitch and roll from accelerometer data.
 
         Args:
-            accel: tuple of (x, y, z) acceleration values
+            accel: tuple of (x, y, z) acceleration values in m/s²
 
         Returns:
             tuple of (pitch, roll) in degrees
         """
         x, y, z = accel
-        pitch = math.degrees(math.atan2(x, math.sqrt(y**2 + z**2)))
-        roll = math.degrees(math.atan2(y, math.sqrt(x**2 + z**2)))
+        x_g = x / 9.81
+        z_g = z / 9.81
+        y_g = y / 9.81
+        pitch = math.degrees(math.atan2(x_g, math.sqrt(y_g**2 + z_g**2)))
+        roll = math.degrees(math.atan2(y_g, math.sqrt(x_g**2 + z_g**2)))
         return pitch, roll
 
     def read(self) -> Optional[dict]:
@@ -79,7 +82,6 @@ class MPU6050Sensor:
 
                 pitch, roll = self._compute_pitch_roll((accel_x, accel_y, accel_z))
                 return {
-                    "yaw": 0.0,
                     "roll": roll,
                     "pitch": pitch,
                     "accel_x": accel_x,
@@ -117,7 +119,6 @@ class MPU6050Sensor:
                     (accel_x, accel_y, accel_z))
 
                 return {
-                    "yaw": 0.0,
                     "roll": roll,
                     "pitch": pitch,
                     "accel_x": accel_x,
