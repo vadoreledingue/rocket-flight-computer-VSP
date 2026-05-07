@@ -112,7 +112,7 @@ class Rocket3D {
       arrowHeadSize * 0.6,
     );
     this.arrows.x.visible = false;
-    this.scene.add(this.arrows.x);
+    this.rocketMesh.add(this.arrows.x);
 
     // Y-axis arrow (green)
     this.arrows.y = new THREE.ArrowHelper(
@@ -124,7 +124,7 @@ class Rocket3D {
       arrowHeadSize * 0.6,
     );
     this.arrows.y.visible = false;
-    this.scene.add(this.arrows.y);
+    this.rocketMesh.add(this.arrows.y);
 
     // Z-axis arrow (blue)
     this.arrows.z = new THREE.ArrowHelper(
@@ -136,7 +136,7 @@ class Rocket3D {
       arrowHeadSize * 0.6,
     );
     this.arrows.z.visible = false;
-    this.scene.add(this.arrows.z);
+    this.rocketMesh.add(this.arrows.z);
   }
 
   update(roll, pitch, yaw) {
