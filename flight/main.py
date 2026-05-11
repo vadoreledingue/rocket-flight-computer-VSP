@@ -13,7 +13,7 @@ from flight.camera import CameraStreamer
 
 class FlightController:
     def __init__(self, db_path: str = "/opt/rocket/db/rocket.db",
-                 bmp280_sensor=None, mpu6050_sensor=None, power_sensor=None) -> None:
+                 bmp280_sensor=None, mpu6050_sensor=None) -> None:
         self.db = FlightDB(db_path)
         self.config = ConfigManager(self.db)
         self.state_machine = StateMachine(
@@ -26,7 +26,6 @@ class FlightController:
         self.camera = CameraStreamer()
         self._bmp280 = bmp280_sensor
         self._mpu6050 = mpu6050_sensor
-        self._pwr = power_sensor
         self._running = False
         self._last_config_check = 0.0
         self._flight_start_time: Optional[float] = None
@@ -48,28 +47,20 @@ class FlightController:
                 print(
                     f"[FLIGHT] ERROR: Failed to create MPU6050 instance: {e}", file=sys.stderr)
                 self._mpu6050 = None
-        if self._pwr is None:
-            from flight.sensors.power import PowerSensor
-            self._pwr = PowerSensor()
-
     def tick(self) -> None:
         now = time.time()
         bmp280_data = self._bmp280.read() if self._bmp280 else None
         mpu6050_data = self._mpu6050.read() if self._mpu6050 else None
-        pwr_data = self._pwr.read() if self._pwr else None
 
         data: dict = {
             "pressure": 0.0, "temperature": 0.0,
             "roll": 0.0, "pitch": 0.0, "yaw": 0.0,
             "accel_x": 0.0, "accel_y": 0.0, "accel_z": 0.0,
-            "battery_v": 0.0, "battery_pct": 0.0,
         }
         if bmp280_data:
             data.update(bmp280_data)
         if mpu6050_data:
             data.update(mpu6050_data)
-        if pwr_data:
-            data.update(pwr_data)
 
         self.altitude_calc.update(data["pressure"], data["temperature"], now)
         data["altitude"] = self.altitude_calc.altitude
@@ -133,12 +124,6 @@ class FlightController:
                     data["pressure"], data["temperature"])
                 self.config.set("calibrate_requested", False)
 
-            # Track battery LOW for active battery test
-            if pwr_data and pwr_data.get("battery_low"):
-                bat_test = self.db.get_active_battery_test()
-                if bat_test and bat_test["low_at"] is None:
-                    self.db.set_battery_test_low(bat_test["id"], now)
-
     def _sync_camera_state(self, now: float, current_state: FlightState) -> None:
         active_camera_states = {
             FlightState.ARMED,
@@ -165,7 +150,7 @@ class FlightController:
     def run(self) -> None:
         self._init_sensors()
         print(
-            f"[FLIGHT] Sensors initialized: BMP280={self._bmp280 is not None}, MPU6050={self._mpu6050 is not None and self._mpu6050._initialized}, Power={self._pwr is not None}", file=sys.stderr)
+            f"[FLIGHT] Sensors initialized: BMP280={self._bmp280 is not None}, MPU6050={self._mpu6050 is not None and self._mpu6050._initialized}", file=sys.stderr)
         self._running = True
 
         def stop(sig, frame):

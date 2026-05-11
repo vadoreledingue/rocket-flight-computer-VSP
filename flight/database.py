@@ -13,7 +13,6 @@ class FlightDB:
     - readings: One row per sensor sample (100+ rows/sec during flight)
     - flights: One row per completed flight (metadata + summary stats)
     - config: Live configuration (key-value store, 1-second reload)
-    - battery_tests: Battery capacity test records (optional feature)
 
     Uses WAL mode for concurrent reader/writer access.
     All timestamps are Unix epoch except flight metadata (ISO 8601).
@@ -37,19 +36,15 @@ class FlightDB:
                        altitude: float, vspeed: float,
                        roll: float, pitch: float, yaw: float,
                        accel_x: float, accel_y: float, accel_z: float,
-                       total_accel: float, net_accel: float,
-                       battery_pct: float, battery_v: float,
-                       state: str) -> None:
+                       total_accel: float, net_accel: float, state: str) -> None:
         self.conn.execute(
             """INSERT INTO readings (flight_id, timestamp, pressure, temperature,
                humidity, altitude, vspeed, roll, pitch, yaw,
-               accel_x, accel_y, accel_z, total_accel, net_accel,
-               battery_pct, battery_v, state)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               accel_x, accel_y, accel_z, total_accel, net_accel, state)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (flight_id, timestamp, pressure, temperature, humidity,
              altitude, vspeed, roll, pitch, yaw,
-             accel_x, accel_y, accel_z, total_accel, net_accel,
-             battery_pct, battery_v, state),
+             accel_x, accel_y, accel_z, total_accel, net_accel, state),
         )
         self.conn.commit()
 
@@ -105,47 +100,3 @@ class FlightDB:
     def get_all_config(self) -> dict[str, str]:
         cur = self.conn.execute("SELECT key, value FROM config")
         return {row["key"]: row["value"] for row in cur.fetchall()}
-
-    # -- Battery tests --
-
-    def start_battery_test(self, timestamp: float) -> int:
-        cur = self.conn.execute(
-            "INSERT INTO battery_tests (started_at, state) VALUES (?, 'RUNNING')",
-            (timestamp,),
-        )
-        self.conn.commit()
-        return cur.lastrowid
-
-    def stop_battery_test(self, test_id: int, timestamp: float) -> None:
-        self.conn.execute(
-            "UPDATE battery_tests SET ended_at=?, state='COMPLETED' WHERE id=?",
-            (timestamp, test_id),
-        )
-        self.conn.commit()
-
-    def set_battery_test_low(self, test_id: int, timestamp: float) -> None:
-        self.conn.execute(
-            "UPDATE battery_tests SET low_at=? WHERE id=? AND low_at IS NULL",
-            (timestamp, test_id),
-        )
-        self.conn.commit()
-
-    def get_active_battery_test(self) -> Optional[dict]:
-        cur = self.conn.execute(
-            "SELECT * FROM battery_tests WHERE state='RUNNING' ORDER BY id DESC LIMIT 1"
-        )
-        row = cur.fetchone()
-        return dict(row) if row else None
-
-    def get_battery_tests(self) -> list[dict]:
-        cur = self.conn.execute(
-            "SELECT * FROM battery_tests ORDER BY id DESC"
-        )
-        return [dict(row) for row in cur.fetchall()]
-
-    def delete_completed_battery_tests(self) -> int:
-        cur = self.conn.execute(
-            "DELETE FROM battery_tests WHERE state='COMPLETED'"
-        )
-        self.conn.commit()
-        return cur.rowcount

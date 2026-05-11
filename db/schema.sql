@@ -15,8 +15,6 @@ CREATE TABLE IF NOT EXISTS readings (
     accel_z REAL,
     total_accel REAL,
     net_accel REAL,
-    battery_pct REAL,
-    battery_v REAL,
     state TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS flights (
@@ -32,11 +30,4 @@ CREATE TABLE IF NOT EXISTS config (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
     updated_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS battery_tests (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    started_at REAL NOT NULL,
-    low_at REAL,
-    ended_at REAL,
-    state TEXT NOT NULL DEFAULT 'RUNNING'
 );

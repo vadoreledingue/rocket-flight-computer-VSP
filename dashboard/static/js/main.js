@@ -20,9 +20,6 @@ document.addEventListener("DOMContentLoaded", function () {
   setupControls();
   updateClock();
   setInterval(updateClock, 1000);
-  pollBatteryTest();
-  setInterval(pollBatteryTest, 1000);
-  loadBatteryHistory();
   pollHardware();
   setInterval(pollHardware, 5000);
   setupCameraDisplay();
@@ -295,16 +292,6 @@ function updateDashboard(d) {
   document.getElementById("temperature").textContent =
     (d.temperature != null ? d.temperature.toFixed(1) : "--") + " \u00B0C";
 
-  // Battery status
-  var batEl = document.getElementById("battery-status");
-  if (d.battery_low) {
-    batEl.textContent = "LOW";
-    batEl.className = "value status-critical";
-  } else {
-    batEl.textContent = "OK";
-    batEl.className = "value status-active";
-  }
-
   // Logging status
   var logEl = document.getElementById("logging-status");
   var isActive = state !== "IDLE";
@@ -432,32 +419,6 @@ function setupControls() {
   document
     .getElementById("btn-config-save")
     .addEventListener("click", saveConfig);
-  document
-    .getElementById("btn-bat-start")
-    .addEventListener("click", async function () {
-      await fetch(API_BASE + "/api/battery-test/start", {
-        method: "POST",
-      });
-      pollBatteryTest();
-      loadBatteryHistory();
-    });
-  document
-    .getElementById("btn-bat-stop")
-    .addEventListener("click", async function () {
-      await fetch(API_BASE + "/api/battery-test/stop", {
-        method: "POST",
-      });
-      pollBatteryTest();
-      loadBatteryHistory();
-    });
-  document
-    .getElementById("btn-bat-clear")
-    .addEventListener("click", async function () {
-      await fetch(API_BASE + "/api/battery-tests/clear", {
-        method: "POST",
-      });
-      loadBatteryHistory();
-    });
 }
 
 // -- Hardware status --
@@ -475,11 +436,6 @@ async function pollHardware() {
     i2cEl.textContent = anyI2c ? "OK" : "NO DEV";
     i2cEl.className =
       "pin-status " + (anyI2c ? "status-active" : "status-inactive");
-
-    // LBO pin
-    var lboEl = document.getElementById("hw-lbo");
-    lboEl.textContent = "READY";
-    lboEl.className = "pin-status status-active";
 
     // Sensors
     hw.sensors.forEach(function (s) {
@@ -508,116 +464,6 @@ async function pollHardware() {
     }
   } catch (e) {
     // ignore - not running on Pi
-  }
-}
-
-// -- Battery test --
-
-async function pollBatteryTest() {
-  try {
-    var resp = await fetch(API_BASE + "/api/battery-test");
-    var test = await resp.json();
-    var stateEl = document.getElementById("bat-test-state");
-    var runtimeEl = document.getElementById("bat-test-runtime");
-    var lowEl = document.getElementById("bat-test-low-at");
-    var btnStart = document.getElementById("btn-bat-start");
-    var btnStop = document.getElementById("btn-bat-stop");
-
-    if (test && test.state === "RUNNING") {
-      stateEl.textContent = "RUNNING";
-      stateEl.className = "value status-active";
-      runtimeEl.textContent = formatDuration(test.elapsed);
-      if (test.low_at) {
-        var lowElapsed = test.low_at - test.started_at;
-        lowEl.textContent = formatDuration(lowElapsed);
-        lowEl.className = "value status-critical";
-      } else {
-        lowEl.textContent = "--";
-        lowEl.className = "value";
-      }
-      btnStart.disabled = true;
-      btnStop.disabled = false;
-    } else {
-      stateEl.textContent = "IDLE";
-      stateEl.className = "value status-inactive";
-      runtimeEl.textContent = "--:--:--";
-      lowEl.textContent = "--";
-      lowEl.className = "value";
-      btnStart.disabled = false;
-      btnStop.disabled = true;
-    }
-  } catch (e) {
-    // ignore polling errors
-  }
-}
-
-function formatDuration(seconds) {
-  var h = Math.floor(seconds / 3600);
-  var m = Math.floor((seconds % 3600) / 60);
-  var s = Math.floor(seconds % 60);
-  return (
-    String(h).padStart(2, "0") +
-    ":" +
-    String(m).padStart(2, "0") +
-    ":" +
-    String(s).padStart(2, "0")
-  );
-}
-
-async function loadBatteryHistory() {
-  try {
-    var resp = await fetch(API_BASE + "/api/battery-tests");
-    var tests = await resp.json();
-    var container = document.getElementById("bat-test-history");
-    while (container.firstChild) {
-      container.removeChild(container.firstChild);
-    }
-
-    var completed = tests.filter(function (t) {
-      return t.state === "COMPLETED";
-    });
-    if (completed.length === 0) return;
-
-    var title = document.createElement("div");
-    title.className = "bat-history-title";
-    title.textContent = "PREVIOUS TESTS";
-    container.appendChild(title);
-
-    completed.slice(0, 5).forEach(function (t) {
-      var row = document.createElement("div");
-      row.className = "bat-history-row";
-      var duration = (t.ended_at || 0) - t.started_at;
-      var date = new Date(t.started_at * 1000);
-      var dateStr =
-        date.toLocaleDateString("de-DE") +
-        " " +
-        date.toLocaleTimeString("de-DE", {
-          hour: "2-digit",
-          minute: "2-digit",
-        });
-
-      var dateSpan = document.createElement("span");
-      dateSpan.textContent = dateStr;
-
-      var runtimeSpan = document.createElement("span");
-      runtimeSpan.className = "runtime";
-      runtimeSpan.textContent = formatDuration(duration);
-
-      row.appendChild(dateSpan);
-
-      if (t.low_at) {
-        var lowSpan = document.createElement("span");
-        lowSpan.className = "low-time";
-        lowSpan.textContent =
-          "LOW @ " + formatDuration(t.low_at - t.started_at);
-        row.appendChild(lowSpan);
-      }
-
-      row.appendChild(runtimeSpan);
-      container.appendChild(row);
-    });
-  } catch (e) {
-    // ignore
   }
 }
 

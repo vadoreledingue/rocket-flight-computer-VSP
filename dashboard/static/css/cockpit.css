@@ -131,23 +131,6 @@ body {
 .conn-status.connected { color: var(--ok); }
 .conn-status.disconnected { color: var(--critical); }
 
-#battery-test-section { padding: 0 8px 8px; }
-
-#battery-test { width: 100%; }
-
-.bat-test-controls { display: flex; gap: 12px; margin-top: 10px; }
-.btn-danger { border-color: var(--critical); color: var(--critical); opacity: 0.6; }
-.btn-danger:hover:not(:disabled) { border-color: var(--critical); color: var(--critical); opacity: 1; }
-
-.bat-history { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 8px; }
-.bat-history-title { font-size: 11px; letter-spacing: 2px; color: var(--text-secondary); margin-bottom: 6px; }
-.bat-history-row {
-    display: flex; justify-content: space-between; padding: 3px 0;
-    font-size: 12px; color: var(--text-secondary);
-}
-.bat-history-row .runtime { color: var(--accent); font-weight: bold; }
-.bat-history-row .low-time { color: var(--warning); }
-
 .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.7); display: flex; align-items: center; justify-content: center; z-index: 100; }
 .modal.hidden { display: none; }
 .modal-content { background: var(--bg-panel); border: 1px solid var(--accent); border-radius: 6px; padding: 24px; min-width: 400px; max-width: 500px; }
@@ -177,8 +160,6 @@ body {
     #readouts { grid-template-columns: 1fr; }
 
     #controls { flex-wrap: wrap; padding: 10px 12px; }
-
-    .bat-test-controls { flex-wrap: wrap; }
 
     .modal-content { min-width: auto; max-width: 95vw; margin: 0 8px; }
 }

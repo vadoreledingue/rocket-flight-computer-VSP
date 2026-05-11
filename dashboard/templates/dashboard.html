@@ -28,10 +28,6 @@
             <span class="pin-label">I2C SDA/SCL</span>
             <span id="hw-i2c" class="pin-status">--</span>
           </div>
-          <div class="pin-row">
-            <span class="pin-label">GPIO4 LBO</span>
-            <span id="hw-lbo" class="pin-status">--</span>
-          </div>
         </div>
         <div class="sensor-list">
           <h3>I2C SENSORS</h3>
@@ -168,10 +164,6 @@
           <span id="supply-status" class="value">--</span>
         </div>
         <div class="readout-row">
-          <span class="label">Battery</span>
-          <span id="battery-status" class="value">--</span>
-        </div>
-        <div class="readout-row">
           <span class="label">Flight Time</span>
           <span id="flight-time" class="value">00:00:00</span>
         </div>
@@ -181,32 +173,6 @@
             >INACTIVE</span
           >
         </div>
-      </section>
-    </div>
-
-    <div id="battery-test-section">
-      <section id="battery-test" class="readout-panel">
-        <h2>BATTERY RUNTIME TEST</h2>
-        <div class="readout-row">
-          <span class="label">Status</span>
-          <span id="bat-test-state" class="value status-inactive">IDLE</span>
-        </div>
-        <div class="readout-row">
-          <span class="label">Runtime</span>
-          <span id="bat-test-runtime" class="value">--:--:--</span>
-        </div>
-        <div class="readout-row">
-          <span class="label">Low Battery at</span>
-          <span id="bat-test-low-at" class="value">--</span>
-        </div>
-        <div class="bat-test-controls">
-          <button id="btn-bat-start" class="ctrl-btn">START TEST</button>
-          <button id="btn-bat-stop" class="ctrl-btn" disabled>STOP TEST</button>
-          <button id="btn-bat-clear" class="ctrl-btn btn-danger">
-            CLEAR HISTORY
-          </button>
-        </div>
-        <div id="bat-test-history" class="bat-history"></div>
       </section>
     </div>
 
