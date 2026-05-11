@@ -1,260 +1,186 @@
 # Rocket Flight Computer
 
-Avionics system for model rockets running on **Raspberry Pi Zero 2W**. Monitors flight in real-time, records sensor data, and streams live video from onboard camera.
+Avionics software for a model rocket based on Raspberry Pi Zero 2 W. The project combines a flight controller, a web dashboard, onboard video streaming, and SQLite-based telemetry logging.
 
 ## Overview
 
-The system consists of **two independent processes** communicating through a shared SQLite database:
+The system is split into two independent processes that share a single SQLite database:
 
-- **Flight Controller** (`flight/`) – Reads sensors at 1–20 Hz, tracks flight state, logs data, records video
-- **Dashboard Server** (`dashboard/`) – Flask web UI (port 8080) showing live telemetry and configuration
+- `flight/`: reads sensors, computes derived flight data, updates the state machine, logs telemetry, and controls the camera
+- `dashboard/`: serves a Flask web UI and REST API for live monitoring and commands
 
-Both can be restarted independently without losing flight data.
-
----
+Because both processes communicate through the database, they can be restarted independently without losing flight history.
 
 ## Hardware
 
 | Component | Purpose | Connection |
 |-----------|---------|------------|
-| **BMP280** | Pressure + Temperature | I2C 0x77 (altitude calculation) |
-| **MPU-6050** | Accel (3-axis) + Gyro (3-axis) | I2C 0x68 (orientation, acceleration) |
-| **PowerBoost 1000C** | Power delivery + LBO pin | GPIO 4 (battery low threshold ~3.2V) |
-| **Raspberry Pi Camera Module 3** | Video capture | Camera port (1280×720, 24 fps, H.264 + MJPEG) |
+| `BMP280` | Pressure and temperature | I2C `0x77` |
+| `MPU-6050` | IMU: acceleration and gyroscope | I2C `0x68` |
+| Raspberry Pi Camera Module 3 | Video recording and preview stream | CSI camera connector |
 
----
+The dashboard also exposes Raspberry Pi supply-voltage status through `vcgencmd get_throttled`.
 
 ## Project Structure
 
-```
+```text
 rocket-flight-computer-VSP/
-├── flight/                          # Flight controller process
-│   ├── main.py                      # FlightController class + main loop
-│   ├── config.py                    # ConfigManager (DB-backed key-value store)
-│   ├── database.py                  # FlightDB (SQLite wrapper)
-│   ├── state_machine.py             # Flight state machine (6 states)
-│   ├── altitude.py                  # AltitudeCalculator (barometric formula)
-│   ├── logger.py                    # FlightLogger (data to DB)
-│   ├── camera.py                    # CameraStreamer (picamera2 + MJPEG)
-│   └── sensors/
-│       ├── bmp280.py                # BMP280 driver (Adafruit)
-│       ├── mpu6050.py               # MPU6050 driver (Adafruit + SMBus fallback)
-│       ├── power.py                 # PowerSensor (GPIO LBO pin)
-│       └── fake.py                  # Simulation sensors (RocketFlightProfile)
-│
-├── dashboard/                       # Dashboard web server
-│   ├── app.py                       # Flask app factory + index route
-│   ├── api.py                       # REST API (endpoints + MJPEG stream)
-│   ├── static/                      # CSS, JS, fonts (to be added)
-│   └── templates/
-│       └── dashboard.html           # Main UI (to be added)
-│
-├── db/
-│   └── schema.sql                   # SQLite schema (4 tables)
-│
-├── scripts/
-│   ├── deploy.sh                    # Raspberry Pi deployment script
-│   └── run_sim.py                   # Simulation runner (fake sensors)
-│
-├── tests/                           # pytest unit tests
-│
-├── config/                          # systemd service files
-│   ├── rocket-flight.service        # Flight controller service
-│   └── rocket-dashboard.service     # Dashboard service
-│
-└── docs/
-    ├── specs/                       # Design specifications
-    └── plans/                       # Implementation plans
+|-- flight/
+|   |-- main.py
+|   |-- state_machine.py
+|   |-- altitude.py
+|   |-- acceleration.py
+|   |-- logger.py
+|   |-- database.py
+|   |-- config.py
+|   |-- camera.py
+|   |-- orientation.py
+|   `-- sensors/
+|       |-- bmp280.py
+|       `-- mpu6050.py
+|-- dashboard/
+|   |-- app.py
+|   |-- api.py
+|   |-- templates/
+|   `-- static/
+|-- db/
+|   `-- schema.sql
+|-- config/
+|   |-- rocket-flight.service
+|   `-- rocket-dashboard.service
+|-- scripts/
+|   `-- deploy.sh
+`-- tests/
 ```
-
----
 
 ## Flight State Machine
 
-The rocket progresses through **6 states** based on altitude and vertical speed:
+The rocket progresses through six states:
 
+```text
+IDLE -> ARMED -> ASCENT -> APOGEE -> DESCENT -> LANDED
 ```
-IDLE ──[arm]──> ARMED ──[launch]──> ASCENT ──[apogee]──> APOGEE ──[instant]──> DESCENT ──[landed]──> LANDED
-```
 
-| State | Trigger | Exit Condition |
-|-------|---------|----------------|
-| **IDLE** | Power-on | Arm command from dashboard |
-| **ARMED** | Arm button | Altitude ≥ 5m + vertical speed > 5 m/s |
-| **ASCENT** | Launch detected | Falling for ≥ 5 consecutive samples |
-| **APOGEE** | Falling detected | Transition to DESCENT (instant) |
-| **DESCENT** | Instant | Altitude stable within 1m for ≥ 10 seconds |
-| **LANDED** | Landing detected | Flight ends, camera stops, data written |
+Main transition logic:
 
-### Configuration Parameters (in database, live-reloadable)
+- `IDLE -> ARMED`: dashboard arm command
+- `ARMED -> ASCENT`: altitude >= 5 m, vertical speed > 5 m/s, and net acceleration >= 5 m/s^2
+- `ASCENT -> APOGEE`: falling detected for `apogee_samples` consecutive samples
+- `APOGEE -> DESCENT`: immediate transition on next update
+- `DESCENT -> LANDED`: altitude remains stable within 1 m for `landing_stable_time` seconds
 
-- `sample_rate_idle` – Hz during IDLE/ARMED (default: 1)
-- `sample_rate_flight` – Hz during ASCENT/APOGEE/DESCENT (default: 20)
-- `apogee_samples` – Consecutive falling samples to confirm apogee (default: 5)
-- `landing_stable_time` – Seconds of stable altitude to confirm landing (default: 10)
+Runtime-tunable parameters stored in the database:
 
----
+- `sample_rate_idle`
+- `sample_rate_flight`
+- `apogee_samples`
+- `landing_stable_time`
 
 ## Data Storage
 
-All data is stored in **SQLite** (`db/rocket.db`), using WAL mode for concurrent read/write:
+All telemetry is stored in SQLite with WAL mode enabled.
 
-### `readings` table
-Every sensor sample from every flight:
+### `readings`
+
+One row per sample:
+
 ```sql
-flight_id | timestamp | pressure | temperature | altitude | vspeed | 
-roll | pitch | yaw | accel_x | accel_y | accel_z | battery_pct | battery_v | state
+id | flight_id | timestamp | pressure | temperature | humidity | altitude | vspeed |
+roll | pitch | yaw | accel_x | accel_y | accel_z | total_accel | net_accel | state
 ```
 
-### `flights` table
-One row per flight:
+### `flights`
+
+One row per recorded flight:
+
 ```sql
 id | started_at | ended_at | max_altitude | max_vspeed | duration | state
 ```
 
-### `config` table
-Live configuration (key-value pairs, reloaded every 1 second during flight):
+### `config`
+
+Live configuration store:
+
 ```sql
 key | value | updated_at
 ```
 
-### `battery_tests` table
-Battery capacity testing (optional feature):
-```sql
-id | started_at | low_at | ended_at | state
-```
+## Flight Controller Loop
 
----
+`flight/main.py` performs this cycle continuously:
 
-## Flight Controller Loop (`flight/main.py`)
+1. Read `BMP280` and `MPU6050`
+2. Compute altitude and vertical speed
+3. Compute total and net acceleration
+4. Update the state machine
+5. Start or stop the camera depending on flight state
+6. Log the sample to SQLite
+7. Reload configuration periodically and consume dashboard commands
 
-The controller ticks **20 times per second** during flight (configurable):
+Sampling is adaptive:
 
-```python
-1. Read sensors (BMP280, MPU6050, battery pin)
-2. Calculate altitude from pressure using barometric formula
-3. Calculate vertical speed (dAlt / dt)
-4. Update flight state machine with latest reading
-5. Log all sensor data to database
-6. If state changed: print state transition
-7. Check for dashboard commands (arm/disarm/calibrate)
-8. Sync camera: start recording if ARMED, stop if LANDED
-9. Reload config every 1 second (sample rates, thresholds)
-10. Sleep until next tick
-```
-
----
-
-## Camera System (`flight/camera.py`)
-
-**CameraStreamer** runs in a dedicated background thread:
-
-- **Recording**: H.264 video file (`flight_YYYYMMDD_HHMMSS.h264`)
-- **Streaming**: MJPEG over HTTP (6 fps to dashboard)
-- **Frame file**: Single JPEG frame at `/dev/shm/rocket_camera_frame.jpg` (RAM disk, ~100 KB)
-
-The dashboard's `/api/camera/stream` endpoint reads this frame file and serves MJPEG.
-
-**Why split recording and streaming?**
-- H.264 playback requires proper decode on desktop
-- MJPEG works in any browser without plugins
-- Low-bandwidth MJPEG stream doesn't affect recording quality
-
----
+- idle or armed: `sample_rate_idle`
+- ascent, apogee, descent: `sample_rate_flight`
 
 ## Dashboard API
 
-All endpoints return JSON. Base URL: `http://rocket.local:8080`
+Base URL: `http://rocket.local:8080`
 
-### Flight State & Telemetry
+### Telemetry
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/status` | GET | Latest sensor reading |
-| `/api/history?seconds=60` | GET | Readings from last N seconds |
-| `/api/flights` | GET | List all completed flights |
+| `/api/status` | `GET` | Latest reading |
+| `/api/history?seconds=60` | `GET` | Recent readings |
+| `/api/flights` | `GET` | Completed flight summaries |
 
 ### Configuration
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/config` | GET | All config parameters as JSON |
-| `/api/config` | POST | Update multiple config keys (JSON body) |
+| `/api/config` | `GET` | Current configuration |
+| `/api/config` | `POST` | Update configuration values |
 
-### Flight Control
-
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/arm` | POST | Arm rocket (transition to ARMED state) |
-| `/api/disarm` | POST | Disarm rocket (return to IDLE) |
-| `/api/calibrate` | POST | Recalibrate altitude (set baseline pressure) |
-
-### Battery Testing (Optional)
+### Commands
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/battery-test` | GET | Current battery test status |
-| `/api/battery-test/start` | POST | Start capacity test |
-| `/api/battery-test/stop` | POST | Stop and record test |
-| `/api/battery-tests` | GET | History of all tests |
-| `/api/battery-tests/clear` | POST | Delete completed tests |
+| `/api/arm` | `POST` | Request arm |
+| `/api/disarm` | `POST` | Request disarm |
+| `/api/calibrate` | `POST` | Recalibrate altitude baseline |
 
-### Hardware Status
+### Hardware and Video
 
 | Endpoint | Method | Purpose |
 |----------|--------|---------|
-| `/api/hardware` | GET | Pin mapping, detected I2C devices, power status |
+| `/api/hardware` | `GET` | I2C scan, pin mapping, and Pi supply status |
+| `/api/camera/stream` | `GET` | Live MJPEG stream |
 
-### Video Stream
+## Local Development
 
-| Endpoint | Method | MIME Type | Purpose |
-|----------|--------|-----------|---------|
-| `/api/camera/stream` | GET | `multipart/x-mixed-replace; boundary=frame` | Live MJPEG stream (6 fps) |
-
----
-
-## Development
-
-### Simulator
-
-Test the flight controller locally without hardware:
+Start the flight controller:
 
 ```bash
-python scripts/run_sim.py
+python -m flight.main
 ```
 
-This uses **fake sensors** (`flight/sensors/fake.py`) that simulate a realistic flight profile:
-- Launch at 1.5 seconds
-- Burn for 2 seconds (35 m/s² acceleration)
-- Coast and descend under gravity
-- Land when altitude reaches 0
-
-### Tests
+Start the dashboard:
 
 ```bash
-python -m pytest tests/ -v
-```
-
-### Local Dashboard
-
-```bash
-# Terminal 1: Start flight controller with simulation
-python scripts/run_sim.py
-
-# Terminal 2: Start dashboard server
 python -m dashboard.app
 ```
 
-Then open `http://localhost:8080`
+Run tests:
 
----
+```bash
+python -m pytest tests -v
+```
 
 ## Raspberry Pi Deployment
 
-### Prerequisites
+Install system dependencies:
 
 ```bash
-# System-wide dependencies (outside venv)
 sudo apt update
 sudo apt install -y \
   libcamera-dev python3-libcamera python3-libcamera-binding \
@@ -263,131 +189,33 @@ sudo apt install -y \
   python3-rpi.gpio
 ```
 
-### First-Time Setup
+Set up the project:
 
 ```bash
-# Clone and set up on Pi
 git clone <repo-url> /opt/rocket
 cd /opt/rocket
-
-# Create venv WITH system packages (for libcamera, RPi.GPIO)
 python3 -m venv venv --system-site-packages
 source venv/bin/activate
-
-# Install Python dependencies
 pip install -r requirements.txt
-
-# Deploy (creates database, systemd services, starts daemons)
 bash scripts/deploy.sh
 ```
 
-### Dashboard URL
+Systemd service files are provided in `config/`.
 
-```
-http://rocket.local:8080
-```
+## Configuration Notes
 
-### Check Status
+The dashboard and flight controller share configuration through the `config` table. Values are stored as JSON in SQLite and reloaded by the flight controller roughly once per second.
 
-```bash
-# Flight controller status
-sudo systemctl status rocket-flight.service
+Useful environment variables:
 
-# Dashboard status
-sudo systemctl status rocket-dashboard.service
-
-# View logs
-sudo journalctl -u rocket-flight.service -f
-sudo journalctl -u rocket-dashboard.service -f
-```
-
-### Manual Restart
-
-```bash
-sudo systemctl restart rocket-flight.service
-sudo systemctl restart rocket-dashboard.service
-```
-
----
-
-## Configuration
-
-All settings are stored in the `config` table and **reloaded every 1 second** during flight. You can:
-
-1. **Via dashboard UI** (if UI exists)
-2. **Via API**:
-   ```bash
-   curl -X POST http://rocket.local:8080/api/config \
-     -H "Content-Type: application/json" \
-     -d '{"sample_rate_flight": 30, "apogee_samples": 7}'
-   ```
-3. **Directly in DB** (advanced):
-   ```bash
-   sqlite3 /opt/rocket/db/rocket.db "UPDATE config SET value='30' WHERE key='sample_rate_flight';"
-   ```
-
----
-
-## Conventions
-
-- **Code**: Python 3, PEP 8, type hints
-- **Timestamps**: Unix epoch (seconds.milliseconds) for sensor data, ISO 8601 for flight metadata
-- **Coordinates**: Altitude (meters), vertical speed (m/s), angles (degrees)
-- **Comments**: English only, explain *why* not *what*
-- **Commits**: Manual (no auto-commits without user confirmation)
-- **Deployment**: Manual via SSH + deploy script
-
----
-
-## Troubleshooting
-
-### Camera not starting
-```bash
-# Check if I2C camera is detected
-vcgencmd get_camera
-
-# Ensure venv was created with --system-site-packages
-python3 -c "import picamera2; print(picamera2.__version__)"
-```
-
-### No I2C devices detected
-```bash
-# Scan I2C bus
-i2cdetect -y 1
-
-# Expected: BMP280 at 0x77, MPU6050 at 0x68
-```
-
-### Flight data not saving
-```bash
-# Check database permissions
-ls -la /opt/rocket/db/
-# Should be owned by 'vld' user
-
-# Verify database schema
-sqlite3 /opt/rocket/db/rocket.db ".schema"
-```
-
-### Dashboard server won't start
-```bash
-# Check port 8080 is not in use
-sudo lsof -i :8080
-
-# Verify Flask installation in venv
-source venv/bin/activate
-python -c "import flask; print(flask.__version__)"
-```
-
----
+- `ROCKET_DB`: override the SQLite database path
+- `ROCKET_CAMERA_FRAME_FILE`: override the MJPEG frame file path used by the dashboard
 
 ## Documentation
 
-- **Architecture deep-dive**: See `ARCHITECTURE.md`
-- **Design spec**: See `docs/superpowers/specs/2026-04-16-rocket-flight-computer-design.md`
-- **API endpoints**: Full reference in `API.md`
+- Architecture details: `ARCHITECTURE.md`
+- Design spec: `docs/superpowers/specs/2026-04-16-rocket-flight-computer-design.md`
 
----
+## License
 
-## Authors & License
-
-See CLAUDE.md for project guidelines.
+See `CLAUDE.md` for project guidance and repository conventions.
