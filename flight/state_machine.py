@@ -9,7 +9,7 @@ class FlightState(Enum):
 
     - IDLE: Safe default, no logging
     - ARMED: Ready for launch, baseline pressure calibrated
-    - ASCENT: Fast climb detected (alt ≥ 5m, vspeed > 5 m/s)
+    - ASCENT: Fast climb detected (alt ≥ 5m, vspeed > 5 m/s, net_accel ≥ 5 m/s²)
     - APOGEE: Apex reached (falling for N samples)
     - DESCENT: Coasting down, landing detector active
     - LANDED: Flight complete, safe state
@@ -60,13 +60,14 @@ class StateMachine:
         alt: float = reading["altitude"]
         vspeed: float = reading["vspeed"]
         ts: float = reading["timestamp"]
+        net_accel: float = reading.get("net_accel", 0.0)
 
         if self._state == FlightState.ARMED:
             # Record arm time on first update
             if self._armed_time is None:
                 self._armed_time = ts
             # Detect launch: meaningful altitude gain and upward speed
-            if alt >= 5.0 and vspeed > 5.0:
+            if alt >= 5.0 and vspeed > 5.0 and net_accel >= 5.0:
                 self._state = FlightState.ASCENT
 
         elif self._state == FlightState.ASCENT:

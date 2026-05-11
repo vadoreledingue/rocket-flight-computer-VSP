@@ -6,6 +6,7 @@ from flight.database import FlightDB
 from flight.config import ConfigManager
 from flight.state_machine import FlightState, StateMachine
 from flight.altitude import AltitudeCalculator
+from flight.acceleration import AccelerationCalculator
 from flight.logger import FlightLogger
 from flight.camera import CameraStreamer
 
@@ -20,6 +21,7 @@ class FlightController:
             landing_stable_time=self.config.get("landing_stable_time"),
         )
         self.altitude_calc = AltitudeCalculator()
+        self.acceleration_calc = AccelerationCalculator()
         self.logger = FlightLogger(self.db)
         self.camera = CameraStreamer()
         self._bmp280 = bmp280_sensor
@@ -74,10 +76,18 @@ class FlightController:
         data["vspeed"] = self.altitude_calc.vspeed
         self._max_vspeed = max(self._max_vspeed, abs(data["vspeed"]))
 
+        accel_data = self.acceleration_calc.update(
+            data.get("accel_x", 0.0),
+            data.get("accel_y", 0.0),
+            data.get("accel_z", 0.0)
+        )
+        data.update(accel_data)
+
         state = self.state_machine.state
         if state not in (FlightState.IDLE,):
             reading = {"altitude": data["altitude"], "vspeed": data["vspeed"],
-                       "accel_z": data["accel_z"], "timestamp": now}
+                       "accel_z": data["accel_z"], "net_accel": data.get("net_accel", 0.0),
+                       "timestamp": now}
             self.state_machine.update(reading)
 
         current_state = self.state_machine.state
