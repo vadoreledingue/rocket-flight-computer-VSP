@@ -35,3 +35,29 @@ def test_altitude_history():
     calc.update(1010.0, 19.0, timestamp=1.0)
     calc.update(1007.0, 18.0, timestamp=2.0)
     assert len(calc.history) == 3
+
+
+def test_invalid_pressure_keeps_last_altitude_and_zero_vspeed():
+    calc = AltitudeCalculator()
+    calc.set_baseline(1013.25, 20.0)
+    calc.update(1013.25, 20.0, timestamp=0.0)
+    calc.update(1010.0, 19.0, timestamp=1.0)
+    last_altitude = calc.altitude
+
+    calc.update(0.0, 0.0, timestamp=2.0)
+
+    assert calc.altitude == pytest.approx(last_altitude)
+    assert calc.vspeed == pytest.approx(0.0)
+
+
+def test_recalibrate_resets_altitude_and_vspeed():
+    calc = AltitudeCalculator()
+    calc.set_baseline(1013.25, 20.0)
+    calc.update(1013.25, 20.0, timestamp=0.0)
+    calc.update(1010.0, 19.0, timestamp=1.0)
+
+    calc.recalibrate(1010.0, 19.0, timestamp=2.0)
+    calc.update(1010.0, 19.0, timestamp=2.0)
+
+    assert calc.altitude == pytest.approx(0.0)
+    assert calc.vspeed == pytest.approx(0.0)

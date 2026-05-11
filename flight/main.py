@@ -32,6 +32,13 @@ class FlightController:
         self._max_vspeed: float = 0.0
         self._previous_state: Optional[FlightState] = None
 
+    def _start_armed_flight(self, now: float, data: dict) -> None:
+        self.logger.start_flight()
+        self.altitude_calc.recalibrate(
+            data["pressure"], data["temperature"], now)
+        self._flight_start_time = now
+        self._max_vspeed = 0.0
+
     def _init_sensors(self) -> None:
         if self._bmp280 is None:
             from flight.sensors.bmp280 import BMP280Sensor
@@ -62,6 +69,9 @@ class FlightController:
         if mpu6050_data:
             data.update(mpu6050_data)
 
+        if self.state_machine.state == FlightState.ARMED and self.logger.flight_id is None:
+            self._start_armed_flight(now, data)
+
         self.altitude_calc.update(data["pressure"], data["temperature"], now)
         data["altitude"] = self.altitude_calc.altitude
         data["vspeed"] = self.altitude_calc.vspeed
@@ -82,13 +92,6 @@ class FlightController:
             self.state_machine.update(reading)
 
         current_state = self.state_machine.state
-
-        if current_state == FlightState.ARMED and self.logger.flight_id is None:
-            self.logger.start_flight()
-            self.altitude_calc.set_baseline(
-                data["pressure"], data["temperature"])
-            self._flight_start_time = now
-            self._max_vspeed = 0.0
 
         if current_state == FlightState.LANDED and self.logger.flight_id is not None:
             duration = now - (self._flight_start_time or now)
@@ -120,8 +123,8 @@ class FlightController:
 
             # Check for calibration request from dashboard
             if self.config.get("calibrate_requested"):
-                self.altitude_calc.set_baseline(
-                    data["pressure"], data["temperature"])
+                self.altitude_calc.recalibrate(
+                    data["pressure"], data["temperature"], now)
                 self.config.set("calibrate_requested", False)
 
     def _sync_camera_state(self, now: float, current_state: FlightState) -> None:

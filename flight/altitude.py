@@ -23,8 +23,20 @@ class AltitudeCalculator:
         self._baseline_pressure = pressure
         self._baseline_temp = temperature
 
+    def recalibrate(self, pressure: float, temperature: float, timestamp: float) -> None:
+        """Reset the altitude reference without creating a synthetic jump."""
+        if pressure > 0:
+            self.set_baseline(pressure, temperature)
+        else:
+            self._baseline_pressure = None
+            self._baseline_temp = None
+        self.altitude = 0.0
+        self.vspeed = 0.0
+        self._last_altitude = 0.0
+        self._last_timestamp = timestamp
+
     def compute(self, pressure: float, temperature: float) -> float:
-        if self._baseline_pressure is None:
+        if self._baseline_pressure is None or pressure <= 0:
             return 0.0
         temp_k = temperature + 273.15
         altitude = temp_k / 0.0065 * (
@@ -33,6 +45,12 @@ class AltitudeCalculator:
         return altitude
 
     def update(self, pressure: float, temperature: float, timestamp: float) -> None:
+        if pressure <= 0:
+            self.altitude = self._last_altitude
+            self.vspeed = 0.0
+            self._last_timestamp = timestamp
+            self.history.append((timestamp, self.altitude))
+            return
         if self._baseline_pressure is None and pressure > 0:
             self.set_baseline(pressure, temperature)
         self.altitude = self.compute(pressure, temperature)
