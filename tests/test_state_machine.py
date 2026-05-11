@@ -3,8 +3,8 @@ from flight.state_machine import FlightState, StateMachine
 
 
 def make_reading(altitude: float = 0.0, vspeed: float = 0.0,
-                 accel_z: float = 9.81, timestamp: float = 0.0) -> dict:
-    return {"altitude": altitude, "vspeed": vspeed, "accel_z": accel_z, "timestamp": timestamp}
+                 accel_z: float = 9.81, net_accel: float = 0.0, timestamp: float = 0.0) -> dict:
+    return {"altitude": altitude, "vspeed": vspeed, "accel_z": accel_z, "net_accel": net_accel, "timestamp": timestamp}
 
 
 class TestStateMachine:
@@ -34,13 +34,14 @@ class TestStateMachine:
         sm = StateMachine()
         sm.arm()
         sm.update(make_reading(altitude=5.0, vspeed=20.0,
-                  accel_z=30.0, timestamp=1.0))
+                  accel_z=30.0, net_accel=20.0, timestamp=1.0))
         assert sm.state == FlightState.ASCENT
 
     def test_apogee_detected_after_n_falling_samples(self):
         sm = StateMachine(apogee_samples=3)
         sm.arm()
-        sm.update(make_reading(altitude=50.0, vspeed=20.0, timestamp=1.0))
+        sm.update(make_reading(altitude=50.0, vspeed=20.0,
+                  net_accel=20.0, timestamp=1.0))
         assert sm.state == FlightState.ASCENT
         sm.update(make_reading(altitude=49.0, vspeed=-1.0, timestamp=2.0))
         sm.update(make_reading(altitude=48.0, vspeed=-1.0, timestamp=3.0))
@@ -50,7 +51,8 @@ class TestStateMachine:
     def test_apogee_detected_without_deploy_thresholds(self):
         sm = StateMachine(apogee_samples=2)
         sm.arm()
-        sm.update(make_reading(altitude=50.0, vspeed=20.0, timestamp=1.0))
+        sm.update(make_reading(altitude=50.0, vspeed=20.0,
+                  net_accel=20.0, timestamp=1.0))
         sm.update(make_reading(altitude=49.0, vspeed=-1.0, timestamp=2.0))
         sm.update(make_reading(altitude=48.0, vspeed=-1.0, timestamp=3.0))
         assert sm.state == FlightState.APOGEE
@@ -58,7 +60,8 @@ class TestStateMachine:
     def test_descent_after_apogee(self):
         sm = StateMachine(apogee_samples=1)
         sm.arm()
-        sm.update(make_reading(altitude=50.0, vspeed=20.0, timestamp=1.0))
+        sm.update(make_reading(altitude=50.0, vspeed=20.0,
+                  net_accel=20.0, timestamp=1.0))
         sm.update(make_reading(altitude=49.0, vspeed=-1.0, timestamp=2.0))
         assert sm.state == FlightState.APOGEE
         sm.update(make_reading(altitude=40.0, vspeed=-5.0, timestamp=3.0))
@@ -67,9 +70,13 @@ class TestStateMachine:
     def test_landed_after_stable_altitude(self):
         sm = StateMachine(apogee_samples=1, landing_stable_time=2)
         sm.arm()
-        sm.update(make_reading(altitude=50.0, vspeed=20.0, timestamp=1.0))
+        sm.update(make_reading(altitude=50.0, vspeed=20.0,
+                  net_accel=20.0, timestamp=1.0))
         sm.update(make_reading(altitude=49.0, vspeed=-1.0, timestamp=2.0))
         sm.update(make_reading(altitude=40.0, vspeed=-5.0, timestamp=3.0))
-        sm.update(make_reading(altitude=1.0, vspeed=0.0, timestamp=10.0))
-        sm.update(make_reading(altitude=1.0, vspeed=0.0, timestamp=13.0))
+        # Descend gradually in 1m steps to reach ground
+        sm.update(make_reading(altitude=1.5, vspeed=-1.0, timestamp=3.5))
+        sm.update(make_reading(altitude=1.0, vspeed=0.0, timestamp=4.0))
+        # Continue stable for 2+ seconds (landing_stable_time=2)
+        sm.update(make_reading(altitude=1.0, vspeed=0.0, timestamp=6.5))
         assert sm.state == FlightState.LANDED

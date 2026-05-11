@@ -36,7 +36,7 @@ def seeded_client(db_path):
         flight_id=None, timestamp=now, pressure=1013.25,
         temperature=21.0, humidity=45.0, altitude=0.0, vspeed=0.0,
         roll=0.0, pitch=0.0, yaw=0.0, accel_x=0.0, accel_y=0.0, accel_z=9.81,
-        battery_pct=85.0, battery_v=3.9, state="IDLE",
+        total_accel=9.81, net_accel=0.0, battery_pct=85.0, battery_v=3.9, state="IDLE",
     )
     db.close()
     app = create_app(db_path=db_path)
@@ -97,7 +97,8 @@ def test_api_arm(client):
     assert resp.status_code == 200
     data = json.loads(resp.data)
     assert data["status"] == "ok"
-    assert client.application.config["config_manager"].get("arm_requested") == "true"
+    assert client.application.config["config_manager"].get(
+        "arm_requested") == "true"
 
 
 def test_api_disarm(client):
@@ -106,7 +107,8 @@ def test_api_disarm(client):
     assert resp.status_code == 200
     data = json.loads(resp.data)
     assert data["status"] == "ok"
-    assert client.application.config["config_manager"].get("disarm_requested") == "true"
+    assert client.application.config["config_manager"].get(
+        "disarm_requested") == "true"
 
 
 def test_api_battery_test_lifecycle(client):

@@ -37,16 +37,19 @@ class FlightDB:
                        altitude: float, vspeed: float,
                        roll: float, pitch: float, yaw: float,
                        accel_x: float, accel_y: float, accel_z: float,
+                       total_accel: float, net_accel: float,
                        battery_pct: float, battery_v: float,
                        state: str) -> None:
         self.conn.execute(
             """INSERT INTO readings (flight_id, timestamp, pressure, temperature,
                humidity, altitude, vspeed, roll, pitch, yaw,
-               accel_x, accel_y, accel_z, battery_pct, battery_v, state)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+               accel_x, accel_y, accel_z, total_accel, net_accel,
+               battery_pct, battery_v, state)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
             (flight_id, timestamp, pressure, temperature, humidity,
              altitude, vspeed, roll, pitch, yaw,
-             accel_x, accel_y, accel_z, battery_pct, battery_v, state),
+             accel_x, accel_y, accel_z, total_accel, net_accel,
+             battery_pct, battery_v, state),
         )
         self.conn.commit()
 

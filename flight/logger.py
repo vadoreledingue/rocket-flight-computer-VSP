@@ -26,6 +26,8 @@ class FlightLogger:
             accel_x=sensor_data.get("accel_x", 0.0),
             accel_y=sensor_data.get("accel_y", 0.0),
             accel_z=sensor_data.get("accel_z", 0.0),
+            total_accel=sensor_data.get("total_accel", 0.0),
+            net_accel=sensor_data.get("net_accel", 0.0),
             battery_pct=sensor_data.get("battery_pct", 0.0),
             battery_v=sensor_data.get("battery_v", 0.0),
             state=state,

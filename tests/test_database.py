@@ -20,7 +20,7 @@ def test_insert_and_read_reading(db: FlightDB):
         flight_id=None, timestamp=time.time(), pressure=1013.25,
         temperature=21.0, humidity=45.0, altitude=0.0, vspeed=0.0,
         roll=0.0, pitch=0.0, yaw=0.0, accel_x=0.0, accel_y=0.0, accel_z=9.81,
-        battery_pct=85.0, battery_v=3.9, state="IDLE",
+        total_accel=9.81, net_accel=0.0, battery_pct=85.0, battery_v=3.9, state="IDLE",
     )
     rows = db.get_latest_readings(count=1)
     assert len(rows) == 1
@@ -95,11 +95,11 @@ def test_get_readings_since(db: FlightDB):
     db.insert_reading(flight_id=None, timestamp=now - 10, pressure=1013.0,
                       temperature=20.0, humidity=40.0, altitude=0.0, vspeed=0.0,
                       roll=0.0, pitch=0.0, yaw=0.0, accel_x=0.0, accel_y=0.0, accel_z=9.81,
-                      battery_pct=80.0, battery_v=3.8, state="IDLE")
+                      total_accel=9.81, net_accel=0.0, battery_pct=80.0, battery_v=3.8, state="IDLE")
     db.insert_reading(flight_id=None, timestamp=now - 2, pressure=1010.0,
                       temperature=20.5, humidity=41.0, altitude=30.0, vspeed=5.0,
                       roll=1.0, pitch=2.0, yaw=3.0, accel_x=0.1, accel_y=0.2, accel_z=10.0,
-                      battery_pct=79.0, battery_v=3.7, state="ASCENT")
+                      total_accel=10.05, net_accel=0.24, battery_pct=79.0, battery_v=3.7, state="ASCENT")
     rows = db.get_readings_since(now - 5)
     assert len(rows) == 1
     assert rows[0]["altitude"] == pytest.approx(30.0)

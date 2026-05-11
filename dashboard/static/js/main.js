@@ -31,19 +31,22 @@ document.addEventListener("DOMContentLoaded", function () {
 function initAttitude() {
   // Try to initialize 3D visualization first
   try {
-    if (typeof Rocket3D === 'undefined') {
-      throw new Error('Rocket3D class not available');
+    if (typeof Rocket3D === "undefined") {
+      throw new Error("Rocket3D class not available");
     }
-    rocket3d = new Rocket3D('pfd-3d-container');
+    rocket3d = new Rocket3D("pfd-3d-container");
     use3D = true;
-    console.log('[ATTITUDE] Using 3D visualization');
-    console.log('[ATTITUDE] 3D Status:', rocket3d.getStatus());
+    console.log("[ATTITUDE] Using 3D visualization");
+    console.log("[ATTITUDE] 3D Status:", rocket3d.getStatus());
   } catch (e) {
-    console.warn('[ATTITUDE] 3D initialization failed, falling back to 2D:', e.message);
+    console.warn(
+      "[ATTITUDE] 3D initialization failed, falling back to 2D:",
+      e.message,
+    );
     use3D = false;
     // Fall back to 2D attitude indicator
     attitude = new AttitudeIndicator("attitude-canvas-2d");
-    document.getElementById("attitude-canvas-2d").style.display = 'block';
+    document.getElementById("attitude-canvas-2d").style.display = "block";
   }
 }
 
@@ -218,27 +221,27 @@ async function poll() {
     setConnectionStatus(true);
   } catch (e) {
     setConnectionStatus(false);
-    console.warn('[POLL] Error fetching status:', e.message);
+    console.warn("[POLL] Error fetching status:", e.message);
   }
 }
 
 function fallbackTo2D() {
-  console.warn('[FALLBACK] Switching to 2D attitude indicator');
+  console.warn("[FALLBACK] Switching to 2D attitude indicator");
   use3D = false;
   if (rocket3d && rocket3d.initialized) {
     try {
       rocket3d.destroy();
     } catch (e) {
-      console.error('[FALLBACK] Error destroying 3D:', e);
+      console.error("[FALLBACK] Error destroying 3D:", e);
     }
   }
   // Initialize 2D if not already initialized
   if (!attitude) {
     try {
-      document.getElementById("attitude-canvas-2d").style.display = 'block';
+      document.getElementById("attitude-canvas-2d").style.display = "block";
       attitude = new AttitudeIndicator("attitude-canvas-2d");
     } catch (e) {
-      console.error('[FALLBACK] Failed to initialize 2D:', e);
+      console.error("[FALLBACK] Failed to initialize 2D:", e);
     }
   }
 }
@@ -261,14 +264,18 @@ function updateDashboard(d) {
   if (use3D && rocket3d) {
     // Check if 3D is still initialized (not lost)
     if (!rocket3d.initialized) {
-      console.warn('[DASHBOARD] 3D not initialized, falling back to 2D');
+      console.warn("[DASHBOARD] 3D not initialized, falling back to 2D");
       fallbackTo2D();
     } else {
       try {
         rocket3d.update(d.roll || 0, d.pitch || 0, d.yaw || 0);
-        rocket3d.updateAcceleration(d.accel_x || 0, d.accel_y || 0, d.accel_z || 0);
+        rocket3d.updateAcceleration(
+          d.accel_x || 0,
+          d.accel_y || 0,
+          d.accel_z || 0,
+        );
       } catch (e) {
-        console.error('[DASHBOARD] 3D update failed:', e);
+        console.error("[DASHBOARD] 3D update failed:", e);
         fallbackTo2D();
       }
     }
@@ -278,7 +285,7 @@ function updateDashboard(d) {
     try {
       attitude.update(d.roll || 0, d.pitch || 0);
     } catch (e) {
-      console.error('[DASHBOARD] 2D update failed:', e);
+      console.error("[DASHBOARD] 2D update failed:", e);
     }
   }
 
@@ -335,8 +342,16 @@ function updateDashboard(d) {
     const ax = d.accel_x || 0;
     const ay = d.accel_y || 0;
     const az = d.accel_z || 0;
-    const totalMag = Math.sqrt(ax * ax + ay * ay + az * az);
-    const netMag = Math.max(0, totalMag - 9.81);
+
+    // Use DB-computed values if available, otherwise calculate
+    const totalMag =
+      d.total_accel !== null && d.total_accel !== undefined
+        ? d.total_accel
+        : Math.sqrt(ax * ax + ay * ay + az * az);
+    const netMag =
+      d.net_accel !== null && d.net_accel !== undefined
+        ? d.net_accel
+        : Math.max(0, totalMag - 9.81);
 
     document.getElementById("imu-total").textContent =
       totalMag.toFixed(2) + " m/s² (" + (totalMag / 9.81).toFixed(2) + "g)";
