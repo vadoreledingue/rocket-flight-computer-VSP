@@ -32,17 +32,17 @@ class FlightDB:
         self.conn.close()
 
     def insert_reading(self, flight_id: Optional[int], timestamp: float,
-                       pressure: float, temperature: float, humidity: float,
+                       pressure: float, temperature: float,
                        altitude: float, vspeed: float,
                        roll: float, pitch: float, yaw: float,
                        accel_x: float, accel_y: float, accel_z: float,
                        total_accel: float, net_accel: float, state: str) -> None:
         self.conn.execute(
             """INSERT INTO readings (flight_id, timestamp, pressure, temperature,
-               humidity, altitude, vspeed, roll, pitch, yaw,
+               altitude, vspeed, roll, pitch, yaw,
                accel_x, accel_y, accel_z, total_accel, net_accel, state)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
-            (flight_id, timestamp, pressure, temperature, humidity,
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+            (flight_id, timestamp, pressure, temperature,
              altitude, vspeed, roll, pitch, yaw,
              accel_x, accel_y, accel_z, total_accel, net_accel, state),
         )
@@ -70,12 +70,12 @@ class FlightDB:
         return cur.lastrowid
 
     def end_flight(self, flight_id: int, max_altitude: float,
-                   max_vspeed: float, duration: float) -> None:
+                   max_vspeed: float, max_net_accel: float, duration: float) -> None:
         now = datetime.now(timezone.utc).isoformat()
         self.conn.execute(
             """UPDATE flights SET ended_at=?, max_altitude=?, max_vspeed=?,
-               duration=?, state='COMPLETED' WHERE id=?""",
-            (now, max_altitude, max_vspeed, duration, flight_id),
+               max_net_accel=?, duration=?, state='COMPLETED' WHERE id=?""",
+            (now, max_altitude, max_vspeed, max_net_accel, duration, flight_id),
         )
         self.conn.commit()
 

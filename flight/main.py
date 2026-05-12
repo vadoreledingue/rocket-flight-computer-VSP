@@ -30,6 +30,7 @@ class FlightController:
         self._last_config_check = 0.0
         self._flight_start_time: Optional[float] = None
         self._max_vspeed: float = 0.0
+        self._max_net_accel: float = 0.0
         self._previous_state: Optional[FlightState] = None
 
     def _start_armed_flight(self, now: float, data: dict) -> None:
@@ -38,6 +39,7 @@ class FlightController:
             data["pressure"], data["temperature"], now)
         self._flight_start_time = now
         self._max_vspeed = 0.0
+        self._max_net_accel = 0.0
 
     def _init_sensors(self) -> None:
         if self._bmp280 is None:
@@ -54,6 +56,7 @@ class FlightController:
                 print(
                     f"[FLIGHT] ERROR: Failed to create MPU6050 instance: {e}", file=sys.stderr)
                 self._mpu6050 = None
+
     def tick(self) -> None:
         now = time.time()
         bmp280_data = self._bmp280.read() if self._bmp280 else None
@@ -83,6 +86,8 @@ class FlightController:
             data.get("accel_z", 0.0)
         )
         data.update(accel_data)
+        self._max_net_accel = max(
+            self._max_net_accel, data.get("net_accel", 0.0))
 
         state = self.state_machine.state
         if state not in (FlightState.IDLE,):
@@ -96,7 +101,9 @@ class FlightController:
         if current_state == FlightState.LANDED and self.logger.flight_id is not None:
             duration = now - (self._flight_start_time or now)
             self.logger.end_flight(max_altitude=self.state_machine.max_altitude,
-                                   max_vspeed=self._max_vspeed, duration=duration)
+                                   max_vspeed=self._max_vspeed,
+                                   max_net_accel=self._max_net_accel,
+                                   duration=duration)
 
         self.logger.log(data, state=current_state.value, timestamp=now)
 

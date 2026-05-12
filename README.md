@@ -13,10 +13,10 @@ Because both processes communicate through the database, they can be restarted i
 
 ## Hardware
 
-| Component | Purpose | Connection |
-|-----------|---------|------------|
-| `BMP280` | Pressure and temperature | I2C `0x77` |
-| `MPU-6050` | IMU: acceleration and gyroscope | I2C `0x68` |
+| Component                    | Purpose                            | Connection           |
+| ---------------------------- | ---------------------------------- | -------------------- |
+| `BMP280`                     | Pressure and temperature           | I2C `0x77`           |
+| `MPU-6050`                   | IMU: acceleration and gyroscope    | I2C `0x68`           |
 | Raspberry Pi Camera Module 3 | Video recording and preview stream | CSI camera connector |
 
 The dashboard also exposes Raspberry Pi supply-voltage status through `vcgencmd get_throttled`.
@@ -85,7 +85,7 @@ All telemetry is stored in SQLite with WAL mode enabled.
 One row per sample:
 
 ```sql
-id | flight_id | timestamp | pressure | temperature | humidity | altitude | vspeed |
+id | flight_id | timestamp | pressure | temperature | altitude | vspeed |
 roll | pitch | yaw | accel_x | accel_y | accel_z | total_accel | net_accel | state
 ```
 
@@ -94,7 +94,7 @@ roll | pitch | yaw | accel_x | accel_y | accel_z | total_accel | net_accel | sta
 One row per recorded flight:
 
 ```sql
-id | started_at | ended_at | max_altitude | max_vspeed | duration | state
+id | started_at | ended_at | max_altitude | max_vspeed | max_net_accel | duration | state
 ```
 
 ### `config`
@@ -128,33 +128,33 @@ Base URL: `http://rocket.local:8080`
 
 ### Telemetry
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/status` | `GET` | Latest reading |
-| `/api/history?seconds=60` | `GET` | Recent readings |
-| `/api/flights` | `GET` | Completed flight summaries |
+| Endpoint                  | Method | Purpose                    |
+| ------------------------- | ------ | -------------------------- |
+| `/api/status`             | `GET`  | Latest reading             |
+| `/api/history?seconds=60` | `GET`  | Recent readings            |
+| `/api/flights`            | `GET`  | Completed flight summaries |
 
 ### Configuration
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/config` | `GET` | Current configuration |
+| Endpoint      | Method | Purpose                     |
+| ------------- | ------ | --------------------------- |
+| `/api/config` | `GET`  | Current configuration       |
 | `/api/config` | `POST` | Update configuration values |
 
 ### Commands
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/arm` | `POST` | Request arm |
-| `/api/disarm` | `POST` | Request disarm |
+| Endpoint         | Method | Purpose                       |
+| ---------------- | ------ | ----------------------------- |
+| `/api/arm`       | `POST` | Request arm                   |
+| `/api/disarm`    | `POST` | Request disarm                |
 | `/api/calibrate` | `POST` | Recalibrate altitude baseline |
 
 ### Hardware and Video
 
-| Endpoint | Method | Purpose |
-|----------|--------|---------|
-| `/api/hardware` | `GET` | I2C scan, pin mapping, and Pi supply status |
-| `/api/camera/stream` | `GET` | Live MJPEG stream |
+| Endpoint             | Method | Purpose                                     |
+| -------------------- | ------ | ------------------------------------------- |
+| `/api/hardware`      | `GET`  | I2C scan, pin mapping, and Pi supply status |
+| `/api/camera/stream` | `GET`  | Live MJPEG stream                           |
 
 ## Local Development
 

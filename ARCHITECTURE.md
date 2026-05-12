@@ -98,7 +98,7 @@ The dashboard reads the frame file from `/api/camera/stream`.
 One row per telemetry sample:
 
 ```sql
-id | flight_id | timestamp | pressure | temperature | humidity | altitude | vspeed |
+id | flight_id | timestamp | pressure | temperature | altitude | vspeed |
 roll | pitch | yaw | accel_x | accel_y | accel_z | total_accel | net_accel | state
 ```
 
@@ -112,7 +112,7 @@ Notes:
 One row per flight:
 
 ```sql
-id | started_at | ended_at | max_altitude | max_vspeed | duration | state
+id | started_at | ended_at | max_altitude | max_vspeed | max_net_accel | duration | state
 ```
 
 ### `config`

@@ -1,8 +1,7 @@
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from flight.sensors.bmp280 import BMP280Sensor
 from flight.sensors.mpu6050 import MPU6050Sensor
-from flight.sensors.power import PowerSensor
 
 
 class TestBMP280:
@@ -54,23 +53,3 @@ class TestMPU6050:
         sensor._device.get_accel_data = MagicMock(side_effect=OSError("I2C"))
         data = sensor.read()
         assert data is None
-
-
-class TestPowerSensor:
-    def test_read_returns_ok_when_battery_not_low(self):
-        sensor = PowerSensor.__new__(PowerSensor)
-        sensor._is_low_battery = MagicMock(return_value=False)
-        data = sensor.read()
-        assert "battery_v" in data
-        assert "battery_pct" in data
-        assert "battery_low" in data
-        assert data["battery_low"] is False
-        assert data["battery_pct"] == pytest.approx(80.0)
-
-    def test_read_returns_low_when_battery_low(self):
-        sensor = PowerSensor.__new__(PowerSensor)
-        sensor._is_low_battery = MagicMock(return_value=True)
-        data = sensor.read()
-        assert data["battery_low"] is True
-        assert data["battery_pct"] == pytest.approx(10.0)
-        assert data["battery_v"] == pytest.approx(3.2)

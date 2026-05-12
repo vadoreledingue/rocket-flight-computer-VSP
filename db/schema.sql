@@ -4,7 +4,6 @@ CREATE TABLE IF NOT EXISTS readings (
     timestamp REAL NOT NULL,
     pressure REAL,
     temperature REAL,
-    humidity REAL,
     altitude REAL,
     vspeed REAL,
     roll REAL,
@@ -23,6 +22,7 @@ CREATE TABLE IF NOT EXISTS flights (
     ended_at TEXT,
     max_altitude REAL DEFAULT 0,
     max_vspeed REAL DEFAULT 0,
+    max_net_accel REAL DEFAULT 0,
     duration REAL DEFAULT 0,
     state TEXT NOT NULL DEFAULT 'ACTIVE'
 );

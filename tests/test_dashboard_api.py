@@ -34,9 +34,9 @@ def seeded_client(db_path):
     now = time.time()
     db.insert_reading(
         flight_id=None, timestamp=now, pressure=1013.25,
-        temperature=21.0, humidity=45.0, altitude=0.0, vspeed=0.0,
+        temperature=21.0, altitude=0.0, vspeed=0.0,
         roll=0.0, pitch=0.0, yaw=0.0, accel_x=0.0, accel_y=0.0, accel_z=9.81,
-        total_accel=9.81, net_accel=0.0, battery_pct=85.0, battery_v=3.9, state="IDLE",
+        total_accel=9.81, net_accel=0.0, state="IDLE",
     )
     db.close()
     app = create_app(db_path=db_path)
@@ -111,61 +111,13 @@ def test_api_disarm(client):
         "disarm_requested") == "true"
 
 
-def test_api_battery_test_lifecycle(client):
-    # No active test initially
-    resp = client.get("/api/battery-test")
-    assert resp.status_code == 200
-    assert json.loads(resp.data) is None
-
-    # Start test
-    resp = client.post("/api/battery-test/start")
-    assert resp.status_code == 200
-    data = json.loads(resp.data)
-    assert data["state"] == "RUNNING"
-
-    # Cannot start while running
-    resp = client.post("/api/battery-test/start")
-    assert resp.status_code == 409
-
-    # Active test exists
-    resp = client.get("/api/battery-test")
-    data = json.loads(resp.data)
-    assert data["state"] == "RUNNING"
-    assert "elapsed" in data
-
-    # Stop test
-    resp = client.post("/api/battery-test/stop")
-    assert resp.status_code == 200
-    data = json.loads(resp.data)
-    assert data["state"] == "COMPLETED"
-
-    # Cannot stop when none running
-    resp = client.post("/api/battery-test/stop")
-    assert resp.status_code == 404
-
-    # History shows completed test
-    resp = client.get("/api/battery-tests")
-    data = json.loads(resp.data)
-    assert len(data) == 1
-    assert data[0]["state"] == "COMPLETED"
-
-    # Clear history
-    resp = client.post("/api/battery-tests/clear")
-    assert resp.status_code == 200
-    data = json.loads(resp.data)
-    assert data["deleted"] == 1
-
-    resp = client.get("/api/battery-tests")
-    assert json.loads(resp.data) == []
-
-
 def test_api_hardware_status(client):
     resp = client.get("/api/hardware")
     assert resp.status_code == 200
     data = json.loads(resp.data)
     assert "pins" in data
     assert "sensors" in data
-    assert len(data["pins"]) == 5
+    assert len(data["pins"]) == 4
     assert len(data["sensors"]) == 2
     # On dev machine, i2cdetect not available, so sensors show not connected
     for sensor in data["sensors"]:
