@@ -82,7 +82,9 @@ class FlightReportManager:
             return manifest
 
         video = self._build_video_metadata(
-            flight_id, self.get_report_path(flight_id) / "flight.mp4")
+            self._get_video_sources(flight_id),
+            self.get_report_path(flight_id) / "flight.mp4",
+        )
         return self._build_manifest(
             flight,
             sample_count=len(self.db.get_readings_for_flight(flight_id)),
@@ -190,23 +192,28 @@ class FlightReportManager:
 
     def _prepare_video_asset(self, flight_id: int, report_path: Path) -> dict[str, Any]:
         mp4_path = report_path / "flight.mp4"
-        metadata = self._build_video_metadata(flight_id, mp4_path)
-        source_path = self.video_dir / f"flight_{flight_id}.h264"
+        source_paths = self._get_video_sources(flight_id)
+        metadata = self._build_video_metadata(source_paths, mp4_path)
         if not metadata["source_h264_available"]:
             return metadata
 
-        if metadata["available"] and mp4_path.stat().st_mtime >= source_path.stat().st_mtime:
+        newest_source_mtime = max(path.stat().st_mtime for path in source_paths)
+        if metadata["available"] and mp4_path.stat().st_mtime >= newest_source_mtime:
             return metadata
 
-        return self._remux_h264_to_mp4(source_path, mp4_path)
+        if len(source_paths) == 1:
+            return self._remux_h264_to_mp4(source_paths[0], mp4_path)
 
-    def _build_video_metadata(self, flight_id: int, mp4_path: Path) -> dict[str, Any]:
-        source_path = self.video_dir / f"flight_{flight_id}.h264"
+        return self._assemble_segments_to_mp4(source_paths, mp4_path, report_path)
+
+    def _build_video_metadata(self, source_paths: list[Path], mp4_path: Path) -> dict[str, Any]:
         return {
             "available": mp4_path.exists() and mp4_path.stat().st_size > 0,
             "filename": "flight.mp4" if mp4_path.exists() and mp4_path.stat().st_size > 0 else None,
-            "source_h264_available": source_path.exists() and source_path.stat().st_size > 0,
-            "source_filename": source_path.name if source_path.exists() else None,
+            "source_h264_available": bool(source_paths),
+            "source_filename": source_paths[0].name if source_paths else None,
+            "source_filenames": [path.name for path in source_paths],
+            "segment_count": len(source_paths),
             "error": None,
         }
 
@@ -217,6 +224,8 @@ class FlightReportManager:
                 "filename": None,
                 "source_h264_available": False,
                 "source_filename": source_path.name,
+                "source_filenames": [],
+                "segment_count": 0,
                 "error": "No recorded H.264 file found for this flight.",
             }
 
@@ -246,6 +255,8 @@ class FlightReportManager:
                 "filename": output_path.name if output_path.exists() else None,
                 "source_h264_available": True,
                 "source_filename": source_path.name,
+                "source_filenames": [source_path.name],
+                "segment_count": 1,
                 "error": None,
             }
         except FileNotFoundError:
@@ -254,6 +265,8 @@ class FlightReportManager:
                 "filename": None,
                 "source_h264_available": True,
                 "source_filename": source_path.name,
+                "source_filenames": [source_path.name],
+                "segment_count": 1,
                 "error": "ffmpeg is not installed on the Pi, so the browser video could not be prepared.",
             }
         except subprocess.CalledProcessError as exc:
@@ -263,8 +276,121 @@ class FlightReportManager:
                 "filename": None,
                 "source_h264_available": True,
                 "source_filename": source_path.name,
+                "source_filenames": [source_path.name],
+                "segment_count": 1,
                 "error": error_text[-240:] if error_text else "Video conversion failed.",
             }
+
+    def _assemble_segments_to_mp4(
+        self,
+        source_paths: list[Path],
+        output_path: Path,
+        report_path: Path,
+    ) -> dict[str, Any]:
+        try:
+            prepared_segments = self._prepare_mp4_segments(source_paths, report_path)
+            concat_file = report_path / "segments.txt"
+            concat_file.write_text(
+                "".join(
+                    f"file '{segment.as_posix()}'\n"
+                    for segment in prepared_segments
+                ),
+                encoding="utf-8",
+            )
+
+            command = [
+                "ffmpeg",
+                "-y",
+                "-f",
+                "concat",
+                "-safe",
+                "0",
+                "-i",
+                str(concat_file),
+                "-c",
+                "copy",
+                "-movflags",
+                "+faststart",
+                str(output_path),
+            ]
+            subprocess.run(
+                command,
+                check=True,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            return {
+                "available": output_path.exists() and output_path.stat().st_size > 0,
+                "filename": output_path.name if output_path.exists() else None,
+                "source_h264_available": True,
+                "source_filename": source_paths[0].name,
+                "source_filenames": [path.name for path in source_paths],
+                "segment_count": len(source_paths),
+                "error": None,
+            }
+        except FileNotFoundError:
+            return {
+                "available": False,
+                "filename": None,
+                "source_h264_available": True,
+                "source_filename": source_paths[0].name,
+                "source_filenames": [path.name for path in source_paths],
+                "segment_count": len(source_paths),
+                "error": "ffmpeg is not installed on the Pi, so segmented flight video could not be assembled.",
+            }
+        except subprocess.CalledProcessError as exc:
+            error_text = (exc.stderr or exc.stdout or str(exc)).strip()
+            return {
+                "available": False,
+                "filename": None,
+                "source_h264_available": True,
+                "source_filename": source_paths[0].name,
+                "source_filenames": [path.name for path in source_paths],
+                "segment_count": len(source_paths),
+                "error": error_text[-240:] if error_text else "Segmented video assembly failed.",
+            }
+
+    def _prepare_mp4_segments(self, source_paths: list[Path], report_path: Path) -> list[Path]:
+        prepared_segments: list[Path] = []
+        for index, source_path in enumerate(source_paths, start=1):
+            segment_path = report_path / f"segment_{index:03d}.mp4"
+            if not segment_path.exists() or segment_path.stat().st_mtime < source_path.stat().st_mtime:
+                command = [
+                    "ffmpeg",
+                    "-y",
+                    "-framerate",
+                    str(self.video_fps),
+                    "-fflags",
+                    "+genpts",
+                    "-i",
+                    str(source_path),
+                    "-c:v",
+                    "copy",
+                    str(segment_path),
+                ]
+                subprocess.run(
+                    command,
+                    check=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=90,
+                )
+            prepared_segments.append(segment_path)
+        return prepared_segments
+
+    def _get_video_sources(self, flight_id: int) -> list[Path]:
+        segmented_paths = sorted(
+            path for path in self.video_dir.glob(f"flight_{flight_id}_part*.h264")
+            if path.is_file() and path.stat().st_size > 0
+        )
+        if segmented_paths:
+            return segmented_paths
+
+        legacy_path = self.video_dir / f"flight_{flight_id}.h264"
+        if legacy_path.exists() and legacy_path.stat().st_size > 0:
+            return [legacy_path]
+        return []
 
     def _build_manifest(
         self,

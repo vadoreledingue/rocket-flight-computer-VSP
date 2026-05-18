@@ -48,6 +48,8 @@ class CameraStreamer:
         self._lock = threading.Lock()
         self.last_error: str | None = None
         self.last_frame_at: float | None = None
+        self.current_flight_id: str | None = None
+        self.segment_index: int = 0
 
         if not PICAMERA2_AVAILABLE:
             print("[CAMERA] Warning: picamera2 not available. Install with: apt install -y python3-picamera2")
@@ -68,7 +70,7 @@ class CameraStreamer:
         self.is_running = True
         if flight_id is None:
             flight_id = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.video_file = self.video_dir / f"flight_{flight_id}.h264"
+        self.video_file = self._next_segment_path(flight_id)
 
         print(f"[CAMERA] Starting capture thread (flight_id={flight_id})")
         self.capture_thread = threading.Thread(
@@ -93,6 +95,7 @@ class CameraStreamer:
 
         self._close_camera()
         self._remove_frame_file()
+        self._reset_recording_session()
 
     def _capture_loop(self) -> None:
         """Picamera2 capture loop with H.264 recording and JPEG frame extraction."""
@@ -220,3 +223,15 @@ class CameraStreamer:
         raise PermissionError(
             f"No writable video directory available (last error: {last_error})"
         )
+
+    def _next_segment_path(self, flight_id: str) -> Path:
+        if self.current_flight_id != flight_id:
+            self.current_flight_id = flight_id
+            self.segment_index = 0
+
+        self.segment_index += 1
+        return self.video_dir / f"flight_{flight_id}_part{self.segment_index:03d}.h264"
+
+    def _reset_recording_session(self) -> None:
+        self.current_flight_id = None
+        self.segment_index = 0

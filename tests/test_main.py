@@ -107,3 +107,22 @@ def test_report_generation_runs_once_after_landing(db_path, mock_sensors):
     ctrl.tick()
 
     ctrl.report_manager.generate_for_flight.assert_called_once_with(active_flight_id)
+
+
+def test_camera_restarts_in_active_flight_with_same_flight_id(db_path, mock_sensors):
+    bmp280, mpu6050 = mock_sensors
+    ctrl = FlightController(
+        db_path=db_path, bmp280_sensor=bmp280, mpu6050_sensor=mpu6050)
+    ctrl.camera = MagicMock()
+    ctrl.camera.is_running = False
+
+    ctrl.state_machine.arm()
+    ctrl.tick()
+    active_flight_id = ctrl.logger.flight_id
+
+    ctrl.camera.start.reset_mock()
+    ctrl.camera.is_running = False
+    ctrl.state_machine._state = FlightState.ASCENT
+    ctrl.tick()
+
+    ctrl.camera.start.assert_called_once_with(str(active_flight_id))
