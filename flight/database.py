@@ -27,6 +27,32 @@ class FlightDB:
     def _init_schema(self) -> None:
         schema = SCHEMA_PATH.read_text()
         self.conn.executescript(schema)
+        self._migrate_legacy_schema()
+
+    def _migrate_legacy_schema(self) -> None:
+        """Add columns introduced by newer releases to existing databases.
+
+        The flight computer and dashboard are commonly upgraded in place on the
+        Pi, so we need to preserve older SQLite files and patch them forward
+        without dropping data.
+        """
+        self._ensure_column("readings", "total_accel", "REAL")
+        self._ensure_column("readings", "net_accel", "REAL")
+        self._ensure_column("flights", "max_net_accel", "REAL DEFAULT 0")
+
+    def _ensure_column(self, table: str, column: str, definition: str) -> None:
+        existing = self._get_columns(table)
+        if column in existing:
+            return
+
+        self.conn.execute(
+            f"ALTER TABLE {table} ADD COLUMN {column} {definition}"
+        )
+        self.conn.commit()
+
+    def _get_columns(self, table: str) -> set[str]:
+        cur = self.conn.execute(f"PRAGMA table_info({table})")
+        return {row["name"] for row in cur.fetchall()}
 
     def close(self) -> None:
         self.conn.close()

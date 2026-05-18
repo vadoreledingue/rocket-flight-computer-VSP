@@ -1,6 +1,7 @@
 import os
 import tempfile
 import time
+import sqlite3
 import pytest
 from flight.database import FlightDB
 
@@ -72,3 +73,71 @@ def test_get_readings_since(db: FlightDB):
     rows = db.get_readings_since(now - 5)
     assert len(rows) == 1
     assert rows[0]["altitude"] == pytest.approx(30.0)
+
+
+def test_migrates_legacy_database_schema():
+    fd, path = tempfile.mkstemp(suffix=".db")
+    os.close(fd)
+    conn = sqlite3.connect(path)
+    conn.executescript(
+        """
+        CREATE TABLE readings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            flight_id INTEGER,
+            timestamp REAL NOT NULL,
+            pressure REAL,
+            temperature REAL,
+            humidity REAL,
+            altitude REAL,
+            vspeed REAL,
+            roll REAL,
+            pitch REAL,
+            yaw REAL,
+            accel_x REAL,
+            accel_y REAL,
+            accel_z REAL,
+            battery_pct REAL,
+            battery_v REAL,
+            state TEXT NOT NULL
+        );
+        CREATE TABLE flights (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            started_at TEXT NOT NULL,
+            ended_at TEXT,
+            max_altitude REAL DEFAULT 0,
+            max_vspeed REAL DEFAULT 0,
+            duration REAL DEFAULT 0,
+            state TEXT NOT NULL DEFAULT 'ACTIVE'
+        );
+        CREATE TABLE config (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );
+        """
+    )
+    conn.commit()
+    conn.close()
+
+    db = FlightDB(path)
+    db.insert_reading(
+        flight_id=None, timestamp=time.time(), pressure=1013.25,
+        temperature=20.0, altitude=5.0, vspeed=1.5,
+        roll=0.0, pitch=0.0, yaw=0.0, accel_x=0.1, accel_y=0.2, accel_z=9.9,
+        total_accel=9.91, net_accel=0.1, state="ARMED",
+    )
+    flight_id = db.create_flight()
+    db.end_flight(
+        flight_id, max_altitude=123.0, max_vspeed=45.0,
+        max_net_accel=3.5, duration=12.0,
+    )
+
+    rows = db.get_latest_readings(count=1)
+    flights = db.get_flights()
+
+    assert rows[0]["total_accel"] == pytest.approx(9.91)
+    assert rows[0]["net_accel"] == pytest.approx(0.1)
+    assert flights[0]["max_net_accel"] == pytest.approx(3.5)
+
+    db.close()
+    os.unlink(path)
