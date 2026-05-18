@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", function () {
     .addEventListener("click", function () {
       loadReports(selectedFlightId);
     });
+  setupLightbox();
   loadReports();
 });
 
@@ -160,16 +161,62 @@ function renderImages(images) {
     const title = document.createElement("h3");
     title.textContent = image.title;
 
+    const hint = document.createElement("div");
+    hint.className = "report-graph-hint";
+    hint.textContent = "Click to enlarge";
+
     const img = document.createElement("img");
     img.src = image.url;
     img.alt = image.title;
     img.className = "report-graph-image";
     img.loading = "lazy";
+    img.addEventListener("click", function () {
+      openLightbox(image.title, image.url);
+    });
 
     card.appendChild(title);
+    card.appendChild(hint);
     card.appendChild(img);
     grid.appendChild(card);
   });
+}
+
+function setupLightbox() {
+  const lightbox = document.getElementById("report-lightbox");
+  const closeButton = document.getElementById("report-lightbox-close");
+
+  closeButton.addEventListener("click", closeLightbox);
+  lightbox.addEventListener("click", function (event) {
+    if (event.target === lightbox) {
+      closeLightbox();
+    }
+  });
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+      closeLightbox();
+    }
+  });
+}
+
+function openLightbox(title, imageUrl) {
+  const lightbox = document.getElementById("report-lightbox");
+  document.getElementById("report-lightbox-title").textContent = title;
+  const image = document.getElementById("report-lightbox-image");
+  image.src = imageUrl;
+  image.alt = title;
+  lightbox.classList.remove("hidden");
+  lightbox.setAttribute("aria-hidden", "false");
+  document.body.style.overflow = "hidden";
+}
+
+function closeLightbox() {
+  const lightbox = document.getElementById("report-lightbox");
+  if (lightbox.classList.contains("hidden")) {
+    return;
+  }
+  lightbox.classList.add("hidden");
+  lightbox.setAttribute("aria-hidden", "true");
+  document.body.style.overflow = "";
 }
 
 function renderEmptyState() {

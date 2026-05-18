@@ -268,7 +268,7 @@ body {
     background: rgba(17, 29, 53, 0.9);
     border: 1px solid var(--border);
     border-radius: 6px;
-    padding: 12px;
+    padding: 14px;
 }
 
 .report-summary-card {
@@ -281,7 +281,14 @@ body {
     color: var(--text-secondary);
     font-size: 11px;
     letter-spacing: 0.16em;
-    margin-bottom: 10px;
+    margin-bottom: 8px;
+}
+
+.report-graph-hint {
+    color: var(--accent);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
 }
 
 .report-video-slot,
@@ -306,14 +313,96 @@ body {
     background: #07111f;
 }
 
+.report-graph-image {
+    display: block;
+    min-height: 420px;
+    object-fit: contain;
+    cursor: zoom-in;
+}
+
 .report-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(520px, 1fr));
+    gap: 16px;
+}
+
+.report-lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(3, 8, 17, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    z-index: 300;
+}
+
+.report-lightbox.hidden {
+    display: none;
+}
+
+.report-lightbox-content {
+    width: min(96vw, 1600px);
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.report-lightbox-title {
+    color: var(--accent);
+    font-size: 14px;
+    letter-spacing: 0.14em;
+    text-align: center;
+}
+
+.report-lightbox-image {
+    width: 100%;
+    max-height: calc(92vh - 70px);
+    object-fit: contain;
+    border: 1px solid var(--accent);
+    border-radius: 8px;
+    background: #07111f;
+    box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+}
+
+.report-lightbox-close {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    background: rgba(17, 29, 53, 0.95);
+    color: var(--text-primary);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+    letter-spacing: 0.12em;
+}
+
+.report-lightbox-close:hover {
+    color: var(--accent);
 }
 
 @media (max-width: 900px) {
     #report-layout {
         grid-template-columns: 1fr;
+    }
+
+    .report-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .report-graph-image {
+        min-height: 280px;
+    }
+
+    .report-lightbox {
+        padding: 14px;
+    }
+
+    .report-lightbox-close {
+        top: 12px;
+        right: 12px;
     }
 }

@@ -48,6 +48,21 @@
       </section>
     </main>
 
+    <div id="report-lightbox" class="report-lightbox hidden" aria-hidden="true">
+      <button
+        id="report-lightbox-close"
+        type="button"
+        class="report-lightbox-close"
+        aria-label="Close full screen graph"
+      >
+        CLOSE
+      </button>
+      <div class="report-lightbox-content">
+        <div id="report-lightbox-title" class="report-lightbox-title"></div>
+        <img id="report-lightbox-image" alt="" class="report-lightbox-image" />
+      </div>
+    </div>
+
     <script src="{{ url_for('static', filename='js/report.js') }}"></script>
   </body>
 </html>
