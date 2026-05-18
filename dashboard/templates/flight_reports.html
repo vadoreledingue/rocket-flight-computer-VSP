@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rocket Flight Reports</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/cockpit.css') }}"
+    />
+  </head>
+  <body class="reports-page">
+    <header id="top-bar">
+      <span class="title">ROCKET FLIGHT REPORTS</span>
+      <div class="page-nav">
+        <a href="/" class="ctrl-btn nav-link">LIVE DASHBOARD</a>
+      </div>
+    </header>
+
+    <main id="report-layout">
+      <aside class="instrument-panel report-sidebar">
+        <div class="report-sidebar-header">
+          <h2>RECORDED FLIGHTS</h2>
+          <button id="btn-refresh-reports" class="ctrl-btn">REFRESH</button>
+        </div>
+        <div id="report-flight-list" class="report-flight-list"></div>
+      </aside>
+
+      <section class="instrument-panel report-viewer">
+        <div class="report-viewer-header">
+          <div>
+            <h2>FLIGHT REPORT</h2>
+            <div id="report-selected-title" class="report-selected-title">
+              Loading recorded flights...
+            </div>
+          </div>
+          <span id="report-status" class="value status-inactive">WAITING</span>
+        </div>
+
+        <div id="report-summary" class="report-summary"></div>
+
+        <div class="report-card">
+          <h3>FLIGHT VIDEO</h3>
+          <div id="report-video-slot" class="report-video-slot"></div>
+        </div>
+
+        <div id="report-grid" class="report-grid"></div>
+      </section>
+    </main>
+
+    <script src="{{ url_for('static', filename='js/report.js') }}"></script>
+  </body>
+</html>

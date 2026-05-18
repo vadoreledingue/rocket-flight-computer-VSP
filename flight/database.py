@@ -109,6 +109,18 @@ class FlightDB:
         cur = self.conn.execute("SELECT * FROM flights ORDER BY id DESC")
         return [dict(row) for row in cur.fetchall()]
 
+    def get_flight(self, flight_id: int) -> Optional[dict]:
+        cur = self.conn.execute("SELECT * FROM flights WHERE id=?", (flight_id,))
+        row = cur.fetchone()
+        return dict(row) if row else None
+
+    def get_readings_for_flight(self, flight_id: int) -> list[dict]:
+        cur = self.conn.execute(
+            "SELECT * FROM readings WHERE flight_id=? ORDER BY timestamp ASC",
+            (flight_id,),
+        )
+        return [dict(row) for row in cur.fetchall()]
+
     def set_config(self, key: str, value: str) -> None:
         now = datetime.now(timezone.utc).isoformat()
         self.conn.execute(

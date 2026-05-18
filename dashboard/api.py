@@ -1,7 +1,7 @@
 import subprocess
 import time
 from pathlib import Path
-from flask import Blueprint, request, jsonify, current_app, Response
+from flask import Blueprint, request, jsonify, current_app, Response, send_file, url_for
 from flight.camera import DEFAULT_FRAME_FILE
 
 
@@ -67,6 +67,32 @@ def create_api_blueprint() -> Blueprint:
     def flights():
         db = current_app.config["db"]
         return jsonify(db.get_flights())
+
+    @bp.route("/api/reports")
+    def reports():
+        report_manager = current_app.config["report_manager"]
+        reports = report_manager.list_reports()
+        return jsonify([_serialize_report(report) for report in reports])
+
+    @bp.route("/api/reports/<int:flight_id>")
+    def report_detail(flight_id: int):
+        report_manager = current_app.config["report_manager"]
+        report = report_manager.get_report(flight_id, generate_missing=True)
+        if report is None:
+            return jsonify({"error": "Flight not found"}), 404
+        return jsonify(_serialize_report(report))
+
+    @bp.route("/api/reports/<int:flight_id>/assets/<path:filename>")
+    def report_asset(flight_id: int, filename: str):
+        report_manager = current_app.config["report_manager"]
+        try:
+            asset_path = report_manager.get_asset_path(flight_id, filename)
+        except ValueError:
+            return jsonify({"error": "Invalid asset path"}), 400
+
+        if not asset_path.exists() or not asset_path.is_file():
+            return jsonify({"error": "Asset not found"}), 404
+        return send_file(asset_path)
 
     @bp.route("/api/hardware")
     def hardware_status():
@@ -181,3 +207,23 @@ def _get_power_status() -> dict:
         }
     except (FileNotFoundError, subprocess.TimeoutExpired, ValueError):
         return {"undervoltage": None, "throttled_hex": None}
+
+
+def _serialize_report(report: dict) -> dict:
+    serialized = dict(report)
+    flight_id = report["flight_id"]
+    serialized["detail_url"] = url_for("api.report_detail", flight_id=flight_id)
+    serialized["images"] = [
+        {
+            **image,
+            "url": url_for("api.report_asset", flight_id=flight_id, filename=image["filename"]),
+        }
+        for image in report.get("images", [])
+    ]
+
+    video = dict(report.get("video") or {})
+    filename = video.get("filename")
+    if filename:
+        video["url"] = url_for("api.report_asset", flight_id=flight_id, filename=filename)
+    serialized["video"] = video
+    return serialized

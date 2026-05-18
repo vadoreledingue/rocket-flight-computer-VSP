@@ -6,6 +6,7 @@ smbus2
 RPi.GPIO
 picamera2
 Pillow
+matplotlib
 
 # Note: libcamera and python3-libcamera must be installed system-wide:
 # sudo apt install -y libcamera-dev python3-libcamera

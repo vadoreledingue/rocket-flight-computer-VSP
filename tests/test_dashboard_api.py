@@ -9,6 +9,37 @@ from flight.config import ConfigManager
 from dashboard.app import create_app
 
 
+def seed_completed_flight(db: FlightDB) -> int:
+    now = time.time()
+    flight_id = db.create_flight()
+    for index in range(5):
+        db.insert_reading(
+            flight_id=flight_id,
+            timestamp=now + index,
+            pressure=1013.25 - index * 0.3,
+            temperature=21.0 + index * 0.2,
+            altitude=index * 12.5,
+            vspeed=5.0 + index,
+            roll=0.0,
+            pitch=0.0,
+            yaw=0.0,
+            accel_x=0.0,
+            accel_y=0.0,
+            accel_z=9.81 + index * 0.4,
+            total_accel=9.81 + index * 0.4,
+            net_accel=index * 0.4,
+            state="ASCENT" if index < 4 else "LANDED",
+        )
+    db.end_flight(
+        flight_id,
+        max_altitude=50.0,
+        max_vspeed=9.0,
+        max_net_accel=1.6,
+        duration=4.0,
+    )
+    return flight_id
+
+
 @pytest.fixture
 def db_path():
     fd, path = tempfile.mkstemp(suffix=".db")
@@ -51,6 +82,12 @@ def test_index_returns_html(client):
     resp = client.get("/")
     assert resp.status_code == 200
     assert b"<!DOCTYPE html>" in resp.data or b"<html" in resp.data
+
+
+def test_reports_page_returns_html(client):
+    resp = client.get("/reports")
+    assert resp.status_code == 200
+    assert b"FLIGHT REPORT" in resp.data
 
 
 def test_api_status_returns_json(seeded_client):
@@ -136,3 +173,37 @@ def test_api_camera_stream_reads_shared_frame_file(client, tmp_path):
     assert resp.mimetype == "multipart/x-mixed-replace"
     first_chunk = next(resp.response)
     assert b"Content-Type: image/jpeg" in first_chunk
+
+
+def test_api_reports_generates_detail_assets(db_path, tmp_path):
+    db = FlightDB(db_path)
+    ConfigManager(db)
+    flight_id = seed_completed_flight(db)
+    db.close()
+
+    app = create_app(
+        db_path=db_path,
+        report_dir=str(tmp_path / "reports"),
+        video_dir=str(tmp_path / "videos"),
+    )
+    app.config["TESTING"] = True
+
+    with app.test_client() as client:
+        list_resp = client.get("/api/reports")
+        assert list_resp.status_code == 200
+        reports = json.loads(list_resp.data)
+        assert len(reports) == 1
+        assert reports[0]["flight_id"] == flight_id
+
+        detail_resp = client.get(f"/api/reports/{flight_id}")
+        assert detail_resp.status_code == 200
+        report = json.loads(detail_resp.data)
+        assert report["report_available"] is True
+        assert len(report["images"]) == 4
+        assert report["video"]["available"] is False
+
+        asset_resp = client.get(report["images"][0]["url"])
+        assert asset_resp.status_code == 200
+        assert asset_resp.mimetype == "image/png"
+
+    app.config["db"].close()

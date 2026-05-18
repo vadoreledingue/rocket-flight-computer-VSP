@@ -126,6 +126,7 @@ body {
 }
 .ctrl-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
 .ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+.nav-link { text-decoration: none; display: inline-flex; align-items: center; }
 
 .conn-status { margin-left: auto; font-size: 12px; color: var(--text-secondary); }
 .conn-status.connected { color: var(--ok); }
@@ -178,4 +179,141 @@ body {
     .ctrl-btn { padding: 6px 14px; font-size: 11px; letter-spacing: 1px; }
 
     .value { font-size: 14px; }
+}
+
+.reports-page {
+    background:
+        radial-gradient(circle at top left, rgba(0, 204, 255, 0.12), transparent 30%),
+        linear-gradient(180deg, #07111f 0%, #0a1628 100%);
+}
+
+#report-layout {
+    display: grid;
+    grid-template-columns: minmax(280px, 360px) 1fr;
+    gap: 10px;
+    padding: 10px;
+    flex: 1;
+}
+
+.page-nav {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.report-sidebar,
+.report-viewer {
+    align-items: stretch;
+}
+
+.report-sidebar-header,
+.report-viewer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.report-flight-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    overflow-y: auto;
+}
+
+.report-flight-card {
+    text-align: left;
+    width: 100%;
+    background: linear-gradient(180deg, rgba(17, 29, 53, 0.95), rgba(10, 22, 40, 0.98));
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    cursor: pointer;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+    font-family: var(--font-mono);
+}
+
+.report-flight-card:hover,
+.report-flight-card.active {
+    border-color: var(--accent);
+    transform: translateY(-1px);
+}
+
+.report-flight-card-title {
+    color: var(--accent);
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.report-flight-card-meta,
+.report-flight-card-badges,
+.report-selected-title {
+    color: var(--text-secondary);
+    font-size: 12px;
+    letter-spacing: 0.04em;
+}
+
+.report-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.report-summary-card,
+.report-card {
+    background: rgba(17, 29, 53, 0.9);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.report-summary-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.report-card h3 {
+    color: var(--text-secondary);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    margin-bottom: 10px;
+}
+
+.report-video-slot,
+.report-empty {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-secondary);
+    background: rgba(7, 17, 31, 0.75);
+    border: 1px dashed var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    text-align: center;
+}
+
+.report-video-player,
+.report-graph-image {
+    width: 100%;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: #07111f;
+}
+
+.report-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 12px;
+}
+
+@media (max-width: 900px) {
+    #report-layout {
+        grid-template-columns: 1fr;
+    }
 }

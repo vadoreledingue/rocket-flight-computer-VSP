@@ -89,3 +89,21 @@ def test_camera_stops_when_state_is_no_longer_active(db_path, mock_sensors):
     ctrl.tick()
 
     ctrl.camera.stop.assert_called_once()
+
+
+def test_report_generation_runs_once_after_landing(db_path, mock_sensors):
+    bmp280, mpu6050 = mock_sensors
+    ctrl = FlightController(
+        db_path=db_path, bmp280_sensor=bmp280, mpu6050_sensor=mpu6050)
+    ctrl.camera = MagicMock()
+    ctrl.camera.is_running = True
+    ctrl.report_manager = MagicMock()
+
+    ctrl.state_machine.arm()
+    ctrl.tick()
+    active_flight_id = ctrl.logger.flight_id
+
+    ctrl.state_machine._state = FlightState.LANDED
+    ctrl.tick()
+
+    ctrl.report_manager.generate_for_flight.assert_called_once_with(active_flight_id)

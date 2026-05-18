@@ -3,12 +3,17 @@ from dashboard.api import create_api_blueprint
 from flight.camera import DEFAULT_FRAME_FILE
 from flight.database import FlightDB
 from flight.config import ConfigManager
+from flight.reporting import FlightReportManager
 from flight.state_machine import StateMachine
 import os
 from pathlib import Path
 
 
-def create_app(db_path: str | None = None) -> Flask:
+def create_app(
+    db_path: str | None = None,
+    report_dir: str | None = None,
+    video_dir: str | None = None,
+) -> Flask:
     """Create Flask app. Use `ROCKET_DB` env var or local `db/rocket.db` by default."""
     if db_path is None:
         db_path = os.environ.get(
@@ -21,9 +26,15 @@ def create_app(db_path: str | None = None) -> Flask:
     app = Flask(__name__, static_folder="static", template_folder="templates")
     db = FlightDB(db_path)
     config = ConfigManager(db)
+    report_manager = FlightReportManager(
+        db,
+        report_dir=report_dir or os.environ.get("ROCKET_REPORT_DIR", "/opt/rocket/data/reports"),
+        video_dir=video_dir or os.environ.get("ROCKET_VIDEO_DIR", "/opt/rocket/data/videos"),
+    )
     state_machine = StateMachine()
     app.config["db"] = db
     app.config["config_manager"] = config
+    app.config["report_manager"] = report_manager
     app.config["state_machine"] = state_machine
     app.config["camera_frame_file"] = Path(
         os.environ.get("ROCKET_CAMERA_FRAME_FILE", DEFAULT_FRAME_FILE)
@@ -35,6 +46,11 @@ def create_app(db_path: str | None = None) -> Flask:
     def index():
         from flask import render_template
         return render_template("dashboard.html")
+
+    @app.route("/reports")
+    def reports():
+        from flask import render_template
+        return render_template("flight_reports.html")
 
     return app
 

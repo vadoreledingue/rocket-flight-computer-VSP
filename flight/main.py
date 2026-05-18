@@ -9,6 +9,7 @@ from flight.altitude import AltitudeCalculator
 from flight.acceleration import AccelerationCalculator
 from flight.logger import FlightLogger
 from flight.camera import CameraStreamer
+from flight.reporting import FlightReportManager
 
 
 class FlightController:
@@ -23,6 +24,7 @@ class FlightController:
         self.altitude_calc = AltitudeCalculator()
         self.acceleration_calc = AccelerationCalculator()
         self.logger = FlightLogger(self.db)
+        self.report_manager = FlightReportManager(self.db)
         self.camera = CameraStreamer()
         self._bmp280 = bmp280_sensor
         self._mpu6050 = mpu6050_sensor
@@ -97,21 +99,31 @@ class FlightController:
             self.state_machine.update(reading)
 
         current_state = self.state_machine.state
+        ended_flight_id: Optional[int] = None
+
+        self.logger.log(data, state=current_state.value, timestamp=now)
 
         if current_state == FlightState.LANDED and self.logger.flight_id is not None:
             duration = now - (self._flight_start_time or now)
+            ended_flight_id = self.logger.flight_id
             self.logger.end_flight(max_altitude=self.state_machine.max_altitude,
                                    max_vspeed=self._max_vspeed,
                                    max_net_accel=self._max_net_accel,
                                    duration=duration)
-
-        self.logger.log(data, state=current_state.value, timestamp=now)
 
         if self._previous_state != current_state:
             print(f"[STATE] {self._previous_state} -> {current_state}")
             self._previous_state = current_state
 
         self._sync_camera_state(now, current_state)
+
+        if ended_flight_id is not None:
+            try:
+                print(f"[REPORT] Generating report for flight {ended_flight_id}")
+                self.report_manager.generate_for_flight(ended_flight_id)
+            except Exception as exc:
+                print(f"[REPORT] Failed to generate report for flight {ended_flight_id}: {exc}",
+                      file=sys.stderr)
 
         if now - self._last_config_check >= 1.0:
             self.config.reload()
