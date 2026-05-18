@@ -146,7 +146,7 @@ function initCharts() {
         labels: [],
         datasets: [
           {
-            label: "Accel (g)",
+            label: "Net Accel (m/s^2)",
             data: [],
             borderColor: "#ff9900",
             backgroundColor: "rgba(255,153,0,0.08)",
@@ -189,11 +189,7 @@ async function updateCharts() {
     const tlabel = new Date(ts * 1000).toLocaleTimeString();
     labels.push(tlabel);
     altData.push(r.altitude != null ? r.altitude : null);
-    const ax = r.accel_x || 0;
-    const ay = r.accel_y || 0;
-    const az = r.accel_z || 0;
-    const mag = Math.sqrt(ax * ax + ay * ay + az * az) / 9.81;
-    axData.push(mag);
+    axData.push(r.net_accel != null ? r.net_accel : null);
   });
 
   // Limit points to last 120
@@ -326,24 +322,20 @@ function updateDashboard(d) {
     : "--";
 
   if (hasImu) {
-    const ax = d.accel_x || 0;
-    const ay = d.accel_y || 0;
-    const az = d.accel_z || 0;
-
-    // Use DB-computed values if available, otherwise calculate
-    const totalMag =
-      d.total_accel !== null && d.total_accel !== undefined
-        ? d.total_accel
-        : Math.sqrt(ax * ax + ay * ay + az * az);
-    const netMag =
-      d.net_accel !== null && d.net_accel !== undefined
-        ? d.net_accel
-        : Math.max(0, totalMag - 9.81);
-
     document.getElementById("imu-total").textContent =
-      totalMag.toFixed(2) + " m/s² (" + (totalMag / 9.81).toFixed(2) + "g)";
+      d.total_accel != null
+        ? d.total_accel.toFixed(2) +
+          " m/s² (" +
+          (d.total_accel / 9.81).toFixed(2) +
+          "g)"
+        : "--";
     document.getElementById("imu-net").textContent =
-      netMag.toFixed(2) + " m/s² (" + (netMag / 9.81).toFixed(2) + "g)";
+      d.net_accel != null
+        ? d.net_accel.toFixed(2) +
+          " m/s² (" +
+          (d.net_accel / 9.81).toFixed(2) +
+          "g)"
+        : "--";
   } else {
     document.getElementById("imu-total").textContent = "--";
     document.getElementById("imu-net").textContent = "--";
