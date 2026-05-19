@@ -256,6 +256,32 @@ body {
     letter-spacing: 0.04em;
 }
 
+.report-section-heading {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.report-section-separated {
+    margin-top: 20px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border);
+}
+
+.report-section-heading h3 {
+    color: var(--accent);
+    font-size: 13px;
+    letter-spacing: 0.16em;
+}
+
+.report-section-note {
+    color: var(--text-secondary);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+}
+
 .report-summary {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

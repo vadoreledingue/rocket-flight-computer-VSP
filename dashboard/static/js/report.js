@@ -38,6 +38,8 @@ async function loadReports(preferredFlightId = null) {
     document.getElementById("report-summary").innerHTML =
       '<div class="report-empty">The report list could not be loaded.</div>';
     document.getElementById("report-grid").innerHTML = "";
+    document.getElementById("report-smoothed-summary").innerHTML = "";
+    document.getElementById("report-smoothed-grid").innerHTML = "";
     document.getElementById("report-video-slot").innerHTML = "";
   }
 }
@@ -98,6 +100,8 @@ async function selectFlight(flightId) {
     document.getElementById("report-summary").innerHTML =
       '<div class="report-empty">The selected report could not be loaded.</div>';
     document.getElementById("report-grid").innerHTML = "";
+    document.getElementById("report-smoothed-summary").innerHTML = "";
+    document.getElementById("report-smoothed-grid").innerHTML = "";
     document.getElementById("report-video-slot").innerHTML = "";
   }
 }
@@ -106,20 +110,38 @@ function renderReportDetail(report) {
   document.getElementById("report-selected-title").textContent =
     "Flight #" + report.flight_id + " | " + formatDateTime(report.started_at);
 
-  document.getElementById("report-summary").innerHTML = [
-    summaryCell("Duration", formatDuration(report.duration || 0)),
-    summaryCell("Max Altitude", formatNumber(report.max_altitude, 1) + " m"),
-    summaryCell("Max VSpeed", formatNumber(report.max_vspeed, 1) + " m/s"),
-    summaryCell(
-      "Max Net Accel",
-      formatNumber(report.max_net_accel, 2) + " m/s^2",
-    ),
-    summaryCell("Samples", String(report.sample_count || 0)),
-    summaryCell("State", report.state || "UNKNOWN"),
-  ].join("");
+  const rawSummary = report.raw_summary || {
+    duration: report.duration || 0,
+    max_altitude: report.max_altitude,
+    max_vspeed: report.max_vspeed,
+    max_net_accel: report.max_net_accel,
+    max_vertical_accel: null,
+    max_temperature: null,
+  };
+  document.getElementById("report-summary").innerHTML = renderSummary(
+    rawSummary,
+    report.sample_count || 0,
+    report.state || "UNKNOWN",
+  );
+
+  const smoothing = report.smoothing || {};
+  const smoothingNote = document.getElementById("report-smoothing-note");
+  smoothingNote.textContent =
+    "Sliding median filter" +
+    (smoothing.window_size ? " | window " + smoothing.window_size : "");
+
+  const smoothedSummary = report.smoothed_summary;
+  document.getElementById("report-smoothed-summary").innerHTML =
+    smoothedSummary
+      ? renderSummary(smoothedSummary, report.sample_count || 0, "SMOOTHED")
+      : '<div class="report-empty">Smoothed metrics are not available for this flight.</div>';
 
   renderVideo(report.video || {});
   renderImages(report.images || []);
+  renderImages(
+    report.smoothed_images || [],
+    document.getElementById("report-smoothed-grid"),
+  );
 }
 
 function renderVideo(video) {
@@ -144,8 +166,8 @@ function renderVideo(video) {
   slot.appendChild(empty);
 }
 
-function renderImages(images) {
-  const grid = document.getElementById("report-grid");
+function renderImages(images, targetGrid) {
+  const grid = targetGrid || document.getElementById("report-grid");
   grid.innerHTML = "";
 
   if (!images.length) {
@@ -225,6 +247,8 @@ function renderEmptyState() {
   document.getElementById("report-summary").innerHTML =
     '<div class="report-empty">The flight report page will populate after the first completed flight.</div>';
   document.getElementById("report-grid").innerHTML = "";
+  document.getElementById("report-smoothed-summary").innerHTML = "";
+  document.getElementById("report-smoothed-grid").innerHTML = "";
   document.getElementById("report-video-slot").innerHTML = "";
   setStatus("EMPTY", "status-inactive");
 }
@@ -246,6 +270,28 @@ function summaryCell(label, value) {
     "</span>" +
     "</div>"
   );
+}
+
+function renderSummary(summary, sampleCount, stateLabel) {
+  return [
+    summaryCell("Duration", formatDuration(summary.duration || 0)),
+    summaryCell("Max Altitude", formatNumber(summary.max_altitude, 1) + " m"),
+    summaryCell("Max VSpeed", formatNumber(summary.max_vspeed, 1) + " m/s"),
+    summaryCell(
+      "Max Net Accel",
+      formatNumber(summary.max_net_accel, 2) + " m/s^2",
+    ),
+    summaryCell(
+      "Max Vertical Accel",
+      formatNumber(summary.max_vertical_accel, 2) + " m/s^2",
+    ),
+    summaryCell(
+      "Max Temperature",
+      formatNumber(summary.max_temperature, 1) + " C",
+    ),
+    summaryCell("Samples", String(sampleCount || 0)),
+    summaryCell("State", stateLabel),
+  ].join("");
 }
 
 function formatDuration(seconds) {

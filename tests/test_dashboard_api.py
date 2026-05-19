@@ -200,6 +200,10 @@ def test_api_reports_generates_detail_assets(db_path, tmp_path):
         report = json.loads(detail_resp.data)
         assert report["report_available"] is True
         assert len(report["images"]) == 4
+        assert len(report["smoothed_images"]) == 4
+        assert report["raw_summary"]["max_altitude"] == 50.0
+        assert report["smoothed_summary"] is not None
+        assert report["smoothing"]["window_size"] == 5
         assert report["video"]["available"] is False
 
         asset_resp = client.get(report["images"][0]["url"])

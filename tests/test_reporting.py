@@ -54,9 +54,15 @@ def test_generate_report_images(tmp_path):
     assert report["report_available"] is True
     assert report["sample_count"] == 6
     assert len(report["images"]) == 4
+    assert len(report["smoothed_images"]) == 4
+    assert report["raw_summary"]["max_altitude"] == 75.0
+    assert report["smoothed_summary"] is not None
+    assert report["smoothing"]["method"] == "sliding_median"
 
     report_path = manager.get_report_path(flight_id)
     for image in report["images"]:
+        assert (report_path / image["filename"]).exists()
+    for image in report["smoothed_images"]:
         assert (report_path / image["filename"]).exists()
 
     db.close()
@@ -150,5 +156,53 @@ def test_report_assembles_segmented_video_metadata(tmp_path, monkeypatch):
     assert report["video"]["segment_count"] == 2
     assert report["video"]["source_filenames"] == [part1.name, part2.name]
     assert (manager.get_report_path(flight_id) / "flight.mp4").exists()
+
+    db.close()
+
+
+def test_smoothed_summary_reduces_spike_outlier(tmp_path):
+    db_path = tmp_path / "flight.db"
+    db = FlightDB(str(db_path))
+    flight_id = db.create_flight()
+    now = time.time()
+    altitudes = [0.0, 1.0, 120.0, 2.0, 3.0]
+
+    for index, altitude in enumerate(altitudes):
+        db.insert_reading(
+            flight_id=flight_id,
+            timestamp=now + index,
+            pressure=1013.25,
+            temperature=20.0,
+            altitude=altitude,
+            vspeed=0.0,
+            roll=0.0,
+            pitch=0.0,
+            yaw=0.0,
+            accel_x=0.0,
+            accel_y=0.0,
+            accel_z=9.81,
+            total_accel=9.81,
+            net_accel=0.0,
+            state="ASCENT" if index < len(altitudes) - 1 else "LANDED",
+        )
+    db.end_flight(
+        flight_id,
+        max_altitude=120.0,
+        max_vspeed=119.0,
+        max_net_accel=0.0,
+        duration=4.0,
+    )
+
+    manager = FlightReportManager(
+        db,
+        report_dir=str(tmp_path / "reports"),
+        video_dir=str(tmp_path / "videos"),
+    )
+    report = manager.generate_for_flight(flight_id)
+
+    assert report is not None
+    assert report["raw_summary"]["max_altitude"] == 120.0
+    assert report["smoothed_summary"]["max_altitude"] < 120.0
+    assert report["smoothed_summary"]["max_altitude"] == 3.0
 
     db.close()

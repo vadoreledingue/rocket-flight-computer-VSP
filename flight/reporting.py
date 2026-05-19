@@ -3,6 +3,7 @@ import os
 import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
+from statistics import median
 from typing import Any
 
 import matplotlib
@@ -16,6 +17,7 @@ from flight.database import FlightDB
 
 DEFAULT_REPORT_DIR = "/opt/rocket/data/reports"
 FALLBACK_REPORT_DIR = "/tmp/rocket/reports"
+MEDIAN_FILTER_WINDOW = 5
 
 CHART_SPECS = (
     {
@@ -81,14 +83,23 @@ class FlightReportManager:
         if manifest:
             return manifest
 
+        rows = self.db.get_readings_for_flight(flight_id)
+        raw_summary, smoothed_summary = self._build_default_summaries(flight, rows)
         video = self._build_video_metadata(
             self._get_video_sources(flight_id),
             self.get_report_path(flight_id) / "flight.mp4",
         )
         return self._build_manifest(
             flight,
-            sample_count=len(self.db.get_readings_for_flight(flight_id)),
+            sample_count=len(rows),
             images=[],
+            smoothed_images=[],
+            raw_summary=raw_summary,
+            smoothed_summary=smoothed_summary,
+            smoothing={
+                "method": "sliding_median",
+                "window_size": MEDIAN_FILTER_WINDOW,
+            },
             video=video,
         )
 
@@ -108,35 +119,44 @@ class FlightReportManager:
             return None
 
         rows = self.db.get_readings_for_flight(flight_id)
+        raw_summary, smoothed_summary = self._build_default_summaries(flight, rows)
         report_path = self.get_report_path(flight_id)
         report_path.mkdir(parents=True, exist_ok=True)
 
         images: list[dict[str, str]] = []
+        smoothed_images: list[dict[str, str]] = []
         if rows:
             telemetry = self._build_telemetry(rows)
-            for spec in CHART_SPECS:
-                filename = f"{spec['key']}.png"
-                self._render_chart(
-                    telemetry["elapsed"],
-                    telemetry[spec["field"]],
-                    spec["title"],
-                    spec["ylabel"],
-                    spec["color"],
-                    report_path / filename,
-                )
-                images.append(
-                    {
-                        "key": spec["key"],
-                        "title": spec["title"],
-                        "filename": filename,
-                    }
-                )
+            smoothed_telemetry = self._build_smoothed_telemetry(
+                telemetry,
+                window_size=MEDIAN_FILTER_WINDOW,
+            )
+            images = self._render_chart_set(
+                telemetry,
+                report_path,
+            )
+            smoothed_images = self._render_chart_set(
+                smoothed_telemetry,
+                report_path,
+                filename_suffix="_smoothed",
+                title_suffix=" (Median Filter)",
+                key_suffix="_smoothed",
+            )
+            raw_summary = self._build_raw_summary(flight, telemetry)
+            smoothed_summary = self._build_smoothed_summary(smoothed_telemetry)
 
         video = self._prepare_video_asset(flight_id, report_path)
         manifest = self._build_manifest(
             flight,
             sample_count=len(rows),
             images=images,
+            smoothed_images=smoothed_images,
+            raw_summary=raw_summary,
+            smoothed_summary=smoothed_summary,
+            smoothing={
+                "method": "sliding_median",
+                "window_size": MEDIAN_FILTER_WINDOW,
+            },
             video=video,
         )
         self._write_manifest(flight_id, manifest)
@@ -154,17 +174,70 @@ class FlightReportManager:
 
     def _build_telemetry(self, rows: list[dict[str, Any]]) -> dict[str, list[float]]:
         t0 = rows[0]["timestamp"] if rows else 0.0
-        telemetry: dict[str, list[float]] = {"elapsed": []}
-        for spec in CHART_SPECS:
-            telemetry[spec["field"]] = []
+        telemetry: dict[str, list[float]] = {
+            "elapsed": [],
+            "altitude": [],
+            "temperature": [],
+            "accel_z": [],
+            "net_accel": [],
+            "vspeed": [],
+        }
 
         for row in rows:
             telemetry["elapsed"].append(row["timestamp"] - t0)
-            for spec in CHART_SPECS:
-                value = row.get(spec["field"])
-                telemetry[spec["field"]].append(0.0 if value is None else value)
+            telemetry["altitude"].append(self._safe_float(row.get("altitude")))
+            telemetry["temperature"].append(self._safe_float(row.get("temperature")))
+            telemetry["accel_z"].append(self._safe_float(row.get("accel_z")))
+            telemetry["net_accel"].append(self._safe_float(row.get("net_accel")))
+            telemetry["vspeed"].append(self._safe_float(row.get("vspeed")))
 
         return telemetry
+
+    def _build_smoothed_telemetry(
+        self,
+        telemetry: dict[str, list[float]],
+        window_size: int,
+    ) -> dict[str, list[float]]:
+        smoothed = {"elapsed": list(telemetry["elapsed"])}
+        smoothed["altitude"] = self._median_filter(
+            telemetry["altitude"], window_size)
+        smoothed["temperature"] = self._median_filter(
+            telemetry["temperature"], window_size)
+        smoothed["accel_z"] = self._median_filter(
+            telemetry["accel_z"], window_size)
+        smoothed["net_accel"] = self._median_filter(
+            telemetry["net_accel"], window_size)
+        smoothed["vspeed"] = self._derive_vspeed(
+            smoothed["altitude"], smoothed["elapsed"])
+        return smoothed
+
+    def _render_chart_set(
+        self,
+        telemetry: dict[str, list[float]],
+        report_path: Path,
+        filename_suffix: str = "",
+        title_suffix: str = "",
+        key_suffix: str = "",
+    ) -> list[dict[str, str]]:
+        images: list[dict[str, str]] = []
+        for spec in CHART_SPECS:
+            filename = f"{spec['key']}{filename_suffix}.png"
+            self._render_chart(
+                telemetry["elapsed"],
+                telemetry[spec["field"]],
+                spec["title"] + title_suffix,
+                spec["ylabel"],
+                spec["color"],
+                report_path / filename,
+            )
+            images.append(
+                {
+                    "key": spec["key"] + key_suffix,
+                    "title": spec["title"] + title_suffix,
+                    "filename": filename,
+                }
+            )
+        return images
 
     def _render_chart(
         self,
@@ -189,6 +262,84 @@ class FlightReportManager:
         fig.tight_layout()
         fig.savefig(output_path, facecolor=fig.get_facecolor(), bbox_inches="tight")
         plt.close(fig)
+
+    def _build_default_summaries(
+        self,
+        flight: dict[str, Any],
+        rows: list[dict[str, Any]],
+    ) -> tuple[dict[str, Any], dict[str, Any] | None]:
+        if not rows:
+            return self._build_raw_summary(flight), None
+
+        telemetry = self._build_telemetry(rows)
+        return self._build_raw_summary(flight, telemetry), None
+
+    def _build_raw_summary(
+        self,
+        flight: dict[str, Any],
+        telemetry: dict[str, list[float]] | None = None,
+    ) -> dict[str, Any]:
+        vertical_accel_max = None
+        temperature_max = None
+        if telemetry:
+            vertical_accel_max = max(telemetry["accel_z"], default=None)
+            temperature_max = max(telemetry["temperature"], default=None)
+
+        return {
+            "label": "Raw Telemetry",
+            "duration": flight.get("duration"),
+            "max_altitude": flight.get("max_altitude"),
+            "max_vspeed": flight.get("max_vspeed"),
+            "max_net_accel": flight.get("max_net_accel"),
+            "max_vertical_accel": vertical_accel_max,
+            "max_temperature": temperature_max,
+        }
+
+    def _build_smoothed_summary(
+        self,
+        telemetry: dict[str, list[float]],
+    ) -> dict[str, Any]:
+        max_vspeed = max((abs(v) for v in telemetry["vspeed"]), default=None)
+        return {
+            "label": "Smoothed Telemetry",
+            "duration": telemetry["elapsed"][-1] if telemetry["elapsed"] else 0.0,
+            "max_altitude": max(telemetry["altitude"], default=None),
+            "max_vspeed": max_vspeed,
+            "max_net_accel": max(telemetry["net_accel"], default=None),
+            "max_vertical_accel": max(telemetry["accel_z"], default=None),
+            "max_temperature": max(telemetry["temperature"], default=None),
+        }
+
+    def _median_filter(self, values: list[float], window_size: int) -> list[float]:
+        if not values:
+            return []
+        radius = max(0, window_size // 2)
+        smoothed: list[float] = []
+        for index in range(len(values)):
+            start = max(0, index - radius)
+            end = min(len(values), index + radius + 1)
+            smoothed.append(median(values[start:end]))
+        return smoothed
+
+    def _derive_vspeed(self, altitudes: list[float], elapsed: list[float]) -> list[float]:
+        if not altitudes:
+            return []
+        if len(altitudes) == 1:
+            return [0.0]
+
+        vspeeds = [0.0]
+        for index in range(1, len(altitudes)):
+            dt = elapsed[index] - elapsed[index - 1]
+            if dt <= 0:
+                vspeeds.append(vspeeds[-1])
+                continue
+            vspeeds.append((altitudes[index] - altitudes[index - 1]) / dt)
+        return vspeeds
+
+    def _safe_float(self, value: Any) -> float:
+        if value is None:
+            return 0.0
+        return float(value)
 
     def _prepare_video_asset(self, flight_id: int, report_path: Path) -> dict[str, Any]:
         mp4_path = report_path / "flight.mp4"
@@ -397,6 +548,10 @@ class FlightReportManager:
         flight: dict[str, Any],
         sample_count: int,
         images: list[dict[str, str]],
+        smoothed_images: list[dict[str, str]],
+        raw_summary: dict[str, Any],
+        smoothed_summary: dict[str, Any] | None,
+        smoothing: dict[str, Any],
         video: dict[str, Any],
     ) -> dict[str, Any]:
         return {
@@ -411,8 +566,12 @@ class FlightReportManager:
             "sample_count": sample_count,
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "images": images,
+            "smoothed_images": smoothed_images,
+            "raw_summary": raw_summary,
+            "smoothed_summary": smoothed_summary,
+            "smoothing": smoothing,
             "video": video,
-            "report_available": bool(images),
+            "report_available": bool(images or smoothed_images),
         }
 
     def _manifest_path(self, flight_id: int) -> Path:

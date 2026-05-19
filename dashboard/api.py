@@ -213,13 +213,10 @@ def _serialize_report(report: dict) -> dict:
     serialized = dict(report)
     flight_id = report["flight_id"]
     serialized["detail_url"] = url_for("api.report_detail", flight_id=flight_id)
-    serialized["images"] = [
-        {
-            **image,
-            "url": url_for("api.report_asset", flight_id=flight_id, filename=image["filename"]),
-        }
-        for image in report.get("images", [])
-    ]
+    serialized["images"] = _serialize_report_images(
+        flight_id, report.get("images", []))
+    serialized["smoothed_images"] = _serialize_report_images(
+        flight_id, report.get("smoothed_images", []))
 
     video = dict(report.get("video") or {})
     filename = video.get("filename")
@@ -227,3 +224,13 @@ def _serialize_report(report: dict) -> dict:
         video["url"] = url_for("api.report_asset", flight_id=flight_id, filename=filename)
     serialized["video"] = video
     return serialized
+
+
+def _serialize_report_images(flight_id: int, images: list[dict]) -> list[dict]:
+    return [
+        {
+            **image,
+            "url": url_for("api.report_asset", flight_id=flight_id, filename=image["filename"]),
+        }
+        for image in images
+    ]

@@ -37,6 +37,12 @@
           <span id="report-status" class="value status-inactive">WAITING</span>
         </div>
 
+        <div class="report-section-heading">
+          <h3>RAW TELEMETRY</h3>
+          <div class="report-section-note">
+            Original values recorded during the flight
+          </div>
+        </div>
         <div id="report-summary" class="report-summary"></div>
 
         <div class="report-card">
@@ -45,6 +51,15 @@
         </div>
 
         <div id="report-grid" class="report-grid"></div>
+
+        <div class="report-section-heading report-section-separated">
+          <h3>SMOOTHED TELEMETRY</h3>
+          <div id="report-smoothing-note" class="report-section-note">
+            Sliding median filter
+          </div>
+        </div>
+        <div id="report-smoothed-summary" class="report-summary"></div>
+        <div id="report-smoothed-grid" class="report-grid"></div>
       </section>
     </main>
 
