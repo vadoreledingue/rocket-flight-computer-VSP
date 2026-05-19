@@ -30,11 +30,11 @@ class TestStateMachine:
         sm.arm()
         assert sm.state == FlightState.ASCENT
 
-    def test_ascent_detected_on_altitude_increase(self):
+    def test_ascent_detected_on_net_acceleration_only(self):
         sm = StateMachine()
         sm.arm()
-        sm.update(make_reading(altitude=5.0, vspeed=20.0,
-                  accel_z=30.0, net_accel=20.0, timestamp=1.0))
+        sm.update(make_reading(altitude=0.2, vspeed=0.1,
+                  accel_z=12.0, net_accel=2.1, timestamp=1.0))
         assert sm.state == FlightState.ASCENT
 
     def test_apogee_detected_after_n_falling_samples(self):
