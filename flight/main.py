@@ -21,6 +21,12 @@ class FlightController:
             apogee_samples=self.config.get("apogee_samples"),
             landing_stable_time=self.config.get("landing_stable_time"),
         )
+        # Initialize flat test mode from configuration
+        try:
+            self.state_machine.set_flat_test(self.config.get("flat_test"))
+        except Exception:
+            # ignore if config missing or invalid
+            pass
         self.altitude_calc = AltitudeCalculator()
         self.acceleration_calc = AccelerationCalculator()
         self.logger = FlightLogger(self.db)
@@ -119,7 +125,8 @@ class FlightController:
 
         if ended_flight_id is not None:
             try:
-                print(f"[REPORT] Generating report for flight {ended_flight_id}")
+                print(
+                    f"[REPORT] Generating report for flight {ended_flight_id}")
                 self.report_manager.generate_for_flight(ended_flight_id)
             except Exception as exc:
                 print(f"[REPORT] Failed to generate report for flight {ended_flight_id}: {exc}",
@@ -145,6 +152,12 @@ class FlightController:
                 self.altitude_calc.recalibrate(
                     data["pressure"], data["temperature"], now)
                 self.config.set("calibrate_requested", False)
+            # Sync flat test mode if changed in config
+            try:
+                desired_flat = bool(self.config.get("flat_test"))
+            except Exception:
+                desired_flat = False
+            self.state_machine.set_flat_test(desired_flat)
 
     def _sync_camera_state(self, now: float, current_state: FlightState) -> None:
         active_camera_states = {

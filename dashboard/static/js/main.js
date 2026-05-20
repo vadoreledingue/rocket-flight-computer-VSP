@@ -18,6 +18,7 @@ document.addEventListener("DOMContentLoaded", function () {
   startPolling();
   setInterval(updateCharts, CHART_UPDATE_MS);
   setupControls();
+  refreshFlatTestButton();
   updateClock();
   setInterval(updateClock, 1000);
   pollHardware();
@@ -404,6 +405,26 @@ function setupControls() {
     .addEventListener("click", async function () {
       await fetch(API_BASE + "/api/calibrate", { method: "POST" });
     });
+  document
+    .getElementById("btn-flattest")
+    .addEventListener("click", async function () {
+      try {
+        // Read current config, toggle flat_test, write it back
+        const resp = await fetch(API_BASE + "/api/config");
+        if (!resp.ok) return;
+        const cfg = await resp.json();
+        const current = !!cfg.flat_test;
+        const newVal = !current;
+        await fetch(API_BASE + "/api/config", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ flat_test: newVal }),
+        });
+        updateFlatTestButton(newVal);
+      } catch (e) {
+        console.warn("[FLATTEST] Toggle failed", e);
+      }
+    });
   document.getElementById("btn-config").addEventListener("click", openConfig);
   document
     .getElementById("btn-config-close")
@@ -411,6 +432,24 @@ function setupControls() {
   document
     .getElementById("btn-config-save")
     .addEventListener("click", saveConfig);
+}
+
+async function refreshFlatTestButton() {
+  try {
+    const resp = await fetch(API_BASE + "/api/config");
+    if (!resp.ok) return;
+    const cfg = await resp.json();
+    updateFlatTestButton(!!cfg.flat_test);
+  } catch (e) {
+    // ignore
+  }
+}
+
+function updateFlatTestButton(enabled) {
+  const btn = document.getElementById("btn-flattest");
+  if (!btn) return;
+  btn.textContent = enabled ? "FLAT TEST: ON" : "FLAT TEST: OFF";
+  btn.className = "ctrl-btn " + (enabled ? "active" : "");
 }
 
 // -- Hardware status --

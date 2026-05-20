@@ -31,6 +31,7 @@ class StateMachine:
         self._apogee_samples = apogee_samples
         self._landing_stable_time = landing_stable_time
         self._landing_accel_threshold = landing_accel_threshold
+        self._flat_test = False
         self._falling_count: int = 0
         self._max_altitude: float = 0.0
         self._armed_time: Optional[float] = None
@@ -70,7 +71,15 @@ class StateMachine:
                 self._armed_time = ts
             # Detect launch from net acceleration alone
             if net_accel > 2.0:
+                # Normal transition to ASCENT
                 self._state = FlightState.ASCENT
+                # If flat-test mode is enabled, immediately treat as DESCENT
+                # so we can record a flat roll test without real flight.
+                if self._flat_test:
+                    self._state = FlightState.DESCENT
+
+    def set_flat_test(self, enabled: bool) -> None:
+        self._flat_test = bool(enabled)
 
         elif self._state == FlightState.ASCENT:
             self._max_altitude = max(self._max_altitude, alt)

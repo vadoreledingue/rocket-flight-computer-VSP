@@ -7,6 +7,7 @@ DEFAULTS: dict[str, Any] = {
     "sample_rate_flight": 20,
     "apogee_samples": 5,
     "landing_stable_time": 10,
+    "flat_test": False,
 }
 
 
