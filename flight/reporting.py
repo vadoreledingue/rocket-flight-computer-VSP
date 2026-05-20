@@ -18,6 +18,9 @@ from flight.database import FlightDB
 DEFAULT_REPORT_DIR = "/opt/rocket/data/reports"
 FALLBACK_REPORT_DIR = "/tmp/rocket/reports"
 MEDIAN_FILTER_WINDOW = 5
+KALMAN_PROCESS_SCALE = 0.12
+KALMAN_MIN_VARIANCE = 1e-3
+OUTLIER_SIGMA = 3.5
 
 CHART_SPECS = (
     {
@@ -96,10 +99,7 @@ class FlightReportManager:
             smoothed_images=[],
             raw_summary=raw_summary,
             smoothed_summary=smoothed_summary,
-            smoothing={
-                "method": "sliding_median",
-                "window_size": MEDIAN_FILTER_WINDOW,
-            },
+            smoothing=self._build_smoothing_metadata(),
             video=video,
         )
 
@@ -139,7 +139,7 @@ class FlightReportManager:
                 smoothed_telemetry,
                 report_path,
                 filename_suffix="_smoothed",
-                title_suffix=" (Median Filter)",
+                title_suffix=" (Kalman Filter)",
                 key_suffix="_smoothed",
             )
             raw_summary = self._build_raw_summary(flight, telemetry)
@@ -153,10 +153,7 @@ class FlightReportManager:
             smoothed_images=smoothed_images,
             raw_summary=raw_summary,
             smoothed_summary=smoothed_summary,
-            smoothing={
-                "method": "sliding_median",
-                "window_size": MEDIAN_FILTER_WINDOW,
-            },
+            smoothing=self._build_smoothing_metadata(),
             video=video,
         )
         self._write_manifest(flight_id, manifest)
@@ -199,13 +196,13 @@ class FlightReportManager:
         window_size: int,
     ) -> dict[str, list[float]]:
         smoothed = {"elapsed": list(telemetry["elapsed"])}
-        smoothed["altitude"] = self._median_filter(
+        smoothed["altitude"] = self._adaptive_kalman_filter(
             telemetry["altitude"], window_size)
-        smoothed["temperature"] = self._median_filter(
+        smoothed["temperature"] = self._adaptive_kalman_filter(
             telemetry["temperature"], window_size)
-        smoothed["accel_z"] = self._median_filter(
+        smoothed["accel_z"] = self._adaptive_kalman_filter(
             telemetry["accel_z"], window_size)
-        smoothed["net_accel"] = self._median_filter(
+        smoothed["net_accel"] = self._adaptive_kalman_filter(
             telemetry["net_accel"], window_size)
         smoothed["vspeed"] = self._derive_vspeed(
             smoothed["altitude"], smoothed["elapsed"])
@@ -272,7 +269,14 @@ class FlightReportManager:
             return self._build_raw_summary(flight), None
 
         telemetry = self._build_telemetry(rows)
-        return self._build_raw_summary(flight, telemetry), None
+        smoothed_telemetry = self._build_smoothed_telemetry(
+            telemetry,
+            window_size=MEDIAN_FILTER_WINDOW,
+        )
+        return (
+            self._build_raw_summary(flight, telemetry),
+            self._build_smoothed_summary(smoothed_telemetry),
+        )
 
     def _build_raw_summary(
         self,
@@ -320,6 +324,100 @@ class FlightReportManager:
             end = min(len(values), index + radius + 1)
             smoothed.append(median(values[start:end]))
         return smoothed
+
+    def _build_smoothing_metadata(self) -> dict[str, Any]:
+        return {
+            "method": "adaptive_kalman",
+            "display_name": "Adaptive Kalman filter",
+            "window_size": MEDIAN_FILTER_WINDOW,
+            "outlier_guard": "sliding_median",
+        }
+
+    def _adaptive_kalman_filter(
+        self,
+        values: list[float],
+        window_size: int,
+    ) -> list[float]:
+        if not values:
+            return []
+        guarded_values = self._suppress_outliers(values, window_size)
+        measurement_variance = self._estimate_variance(guarded_values)
+        process_variance = max(
+            measurement_variance * KALMAN_PROCESS_SCALE,
+            KALMAN_MIN_VARIANCE,
+        )
+        forward = self._run_scalar_kalman_filter(
+            guarded_values,
+            process_variance,
+            measurement_variance,
+        )
+        backward = list(
+            reversed(
+                self._run_scalar_kalman_filter(
+                    list(reversed(guarded_values)),
+                    process_variance,
+                    measurement_variance,
+                )
+            )
+        )
+        return [
+            (forward_value + backward_value) / 2.0
+            for forward_value, backward_value in zip(forward, backward)
+        ]
+
+    def _suppress_outliers(
+        self,
+        values: list[float],
+        window_size: int,
+    ) -> list[float]:
+        if not values:
+            return []
+        radius = max(1, window_size // 2)
+        cleaned: list[float] = []
+        for index, value in enumerate(values):
+            start = max(0, index - radius)
+            end = min(len(values), index + radius + 1)
+            window = values[start:end]
+            local_median = median(window)
+            deviations = [abs(sample - local_median) for sample in window]
+            local_mad = median(deviations)
+            robust_sigma = max(local_mad * 1.4826, KALMAN_MIN_VARIANCE)
+            if abs(value - local_median) > OUTLIER_SIGMA * robust_sigma:
+                cleaned.append(local_median)
+            else:
+                cleaned.append(value)
+        return cleaned
+
+    def _estimate_variance(self, values: list[float]) -> float:
+        if len(values) < 2:
+            return 1.0
+        deltas = [values[index] - values[index - 1]
+                  for index in range(1, len(values))]
+        delta_scale = median(abs(delta) for delta in deltas)
+        baseline = max(delta_scale, KALMAN_MIN_VARIANCE)
+        return baseline * baseline
+
+    def _run_scalar_kalman_filter(
+        self,
+        measurements: list[float],
+        process_variance: float,
+        measurement_variance: float,
+    ) -> list[float]:
+        if not measurements:
+            return []
+
+        estimate = measurements[0]
+        estimation_error = max(measurement_variance, 1.0)
+        filtered = [estimate]
+
+        for measurement in measurements[1:]:
+            estimation_error += process_variance
+            gain = estimation_error / (estimation_error + measurement_variance)
+            estimate += gain * (measurement - estimate)
+            estimation_error *= 1.0 - gain
+            filtered.append(estimate)
+
+        return filtered
 
     def _derive_vspeed(self, altitudes: list[float], elapsed: list[float]) -> list[float]:
         if not altitudes:
@@ -590,9 +688,21 @@ class FlightReportManager:
         if not manifest_path.exists():
             return None
         try:
-            return json.loads(manifest_path.read_text(encoding="utf-8"))
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return None
+        if not self._is_manifest_current(manifest):
+            return None
+        return manifest
+
+    def _is_manifest_current(self, manifest: dict[str, Any]) -> bool:
+        expected = self._build_smoothing_metadata()
+        actual = manifest.get("smoothing") or {}
+        return (
+            actual.get("method") == expected["method"]
+            and actual.get("window_size") == expected["window_size"]
+            and actual.get("outlier_guard") == expected["outlier_guard"]
+        )
 
     def _prepare_dir(self, preferred_dir: str, fallback_dir: str) -> Path:
         candidates = [Path(preferred_dir), Path(fallback_dir)]

@@ -127,8 +127,9 @@ function renderReportDetail(report) {
   const smoothing = report.smoothing || {};
   const smoothingNote = document.getElementById("report-smoothing-note");
   smoothingNote.textContent =
-    "Sliding median filter" +
-    (smoothing.window_size ? " | window " + smoothing.window_size : "");
+    (smoothing.display_name || "Smoothed telemetry") +
+    (smoothing.window_size ? " | window " + smoothing.window_size : "") +
+    (smoothing.outlier_guard ? " | guard " + smoothing.outlier_guard : "");
 
   const smoothedSummary = report.smoothed_summary;
   document.getElementById("report-smoothed-summary").innerHTML =

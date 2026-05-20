@@ -203,7 +203,9 @@ def test_api_reports_generates_detail_assets(db_path, tmp_path):
         assert len(report["smoothed_images"]) == 4
         assert report["raw_summary"]["max_altitude"] == 50.0
         assert report["smoothed_summary"] is not None
+        assert report["smoothing"]["method"] == "adaptive_kalman"
         assert report["smoothing"]["window_size"] == 5
+        assert report["smoothing"]["outlier_guard"] == "sliding_median"
         assert report["video"]["available"] is False
 
         asset_resp = client.get(report["images"][0]["url"])

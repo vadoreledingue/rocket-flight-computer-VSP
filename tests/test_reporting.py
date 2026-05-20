@@ -2,6 +2,7 @@ import os
 import tempfile
 import time
 import subprocess
+import json
 
 from flight.database import FlightDB
 from flight.reporting import FlightReportManager
@@ -57,7 +58,8 @@ def test_generate_report_images(tmp_path):
     assert len(report["smoothed_images"]) == 4
     assert report["raw_summary"]["max_altitude"] == 75.0
     assert report["smoothed_summary"] is not None
-    assert report["smoothing"]["method"] == "sliding_median"
+    assert report["smoothing"]["method"] == "adaptive_kalman"
+    assert report["smoothing"]["outlier_guard"] == "sliding_median"
 
     report_path = manager.get_report_path(flight_id)
     for image in report["images"]:
@@ -202,7 +204,49 @@ def test_smoothed_summary_reduces_spike_outlier(tmp_path):
 
     assert report is not None
     assert report["raw_summary"]["max_altitude"] == 120.0
-    assert report["smoothed_summary"]["max_altitude"] < 120.0
-    assert report["smoothed_summary"]["max_altitude"] == 3.0
+    assert report["smoothed_summary"]["max_altitude"] < 10.0
+    assert report["smoothed_summary"]["max_altitude"] > 2.0
+
+    report_path = manager.get_report_path(flight_id)
+    smoothed_report = manager._build_smoothed_telemetry(
+        manager._build_telemetry(db.get_readings_for_flight(flight_id)),
+        window_size=5,
+    )
+    assert max(smoothed_report["altitude"]) < 10.0
+    assert (report_path / "altitude_smoothed.png").exists()
+
+    db.close()
+
+
+def test_outdated_smoothed_manifest_is_regenerated(tmp_path):
+    db_path = tmp_path / "flight.db"
+    db = FlightDB(str(db_path))
+    flight_id = build_completed_flight(db)
+
+    manager = FlightReportManager(
+        db,
+        report_dir=str(tmp_path / "reports"),
+        video_dir=str(tmp_path / "videos"),
+    )
+    report_path = manager.get_report_path(flight_id)
+    report_path.mkdir(parents=True, exist_ok=True)
+    (report_path / "report.json").write_text(
+        json.dumps(
+            {
+                "flight_id": flight_id,
+                "smoothing": {
+                    "method": "sliding_median",
+                    "window_size": 5,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = manager.get_report(flight_id, generate_missing=True)
+
+    assert report is not None
+    assert report["smoothing"]["method"] == "adaptive_kalman"
+    assert (report_path / "altitude_smoothed.png").exists()
 
     db.close()
