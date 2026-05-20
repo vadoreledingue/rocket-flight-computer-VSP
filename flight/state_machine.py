@@ -25,10 +25,12 @@ class FlightState(Enum):
 
 class StateMachine:
     def __init__(self, apogee_samples: int = 5,
-                 landing_stable_time: float = 10.0) -> None:
+                 landing_stable_time: float = 10.0,
+                 landing_accel_threshold: float = 1.0) -> None:
         self._state = FlightState.IDLE
         self._apogee_samples = apogee_samples
         self._landing_stable_time = landing_stable_time
+        self._landing_accel_threshold = landing_accel_threshold
         self._falling_count: int = 0
         self._max_altitude: float = 0.0
         self._armed_time: Optional[float] = None
@@ -87,12 +89,12 @@ class StateMachine:
             self._last_altitude = None
 
         elif self._state == FlightState.DESCENT:
-            # Detect landing by stable altitude over landing_stable_time seconds.
-            # If no previous altitude is known (e.g. first sample after apogee),
-            # begin the stability timer immediately.
-            if self._last_altitude is None:
-                self._stable_since = ts
-            elif abs(alt - self._last_altitude) < 1.0:
+            # Detect landing by low net acceleration maintained for
+            # landing_stable_time seconds. This replaces the previous
+            # altitude-stability detector: when |net_accel| is below the
+            # configured threshold for the required window, we consider the
+            # vehicle landed.
+            if abs(net_accel) < self._landing_accel_threshold:
                 if self._stable_since is None:
                     self._stable_since = ts
                 elif ts - self._stable_since >= self._landing_stable_time:
