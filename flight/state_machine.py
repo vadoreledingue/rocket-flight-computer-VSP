@@ -1,11 +1,11 @@
-from enum import Enum
+﻿from enum import Enum
 from typing import Optional
 
 
 class FlightState(Enum):
     """Six-state rocket lifecycle model.
 
-    IDLE → ARMED → ASCENT → APOGEE → DESCENT → LANDED
+    IDLE -> ARMED -> ASCENT -> APOGEE -> DESCENT -> LANDED
 
     - IDLE: Safe default, no logging
     - ARMED: Ready for launch, baseline pressure calibrated
@@ -59,6 +59,9 @@ class StateMachine:
         if self._state == FlightState.ARMED:
             self._state = FlightState.IDLE
 
+    def set_flat_test(self, enabled: bool) -> None:
+        self._flat_test = bool(enabled)
+
     def update(self, reading: dict) -> None:
         alt: float = reading["altitude"]
         vspeed: float = reading["vspeed"]
@@ -77,9 +80,6 @@ class StateMachine:
                 # so we can record a flat roll test without real flight.
                 if self._flat_test:
                     self._state = FlightState.DESCENT
-
-    def set_flat_test(self, enabled: bool) -> None:
-        self._flat_test = bool(enabled)
 
         elif self._state == FlightState.ASCENT:
             self._max_altitude = max(self._max_altitude, alt)
