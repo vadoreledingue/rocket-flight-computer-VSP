@@ -245,6 +245,8 @@ function updateDashboard(d) {
   var stateEl = document.getElementById("flight-state");
   stateEl.textContent = state;
   stateEl.className = "state " + state.toLowerCase();
+  updateFlatFlightIndicator(!!d.flat_test);
+  updateFlatTestButton(!!d.flat_test);
 
   // PFD: altitude and vertical speed
   document.getElementById("alt-value").textContent =
@@ -439,7 +441,9 @@ async function refreshFlatTestButton() {
     const resp = await fetch(API_BASE + "/api/config");
     if (!resp.ok) return;
     const cfg = await resp.json();
-    updateFlatTestButton(!!cfg.flat_test);
+    const enabled = !!cfg.flat_test;
+    updateFlatTestButton(enabled);
+    updateFlatFlightIndicator(enabled);
   } catch (e) {
     // ignore
   }
@@ -450,6 +454,14 @@ function updateFlatTestButton(enabled) {
   if (!btn) return;
   btn.textContent = enabled ? "FLAT TEST: ON" : "FLAT TEST: OFF";
   btn.className = "ctrl-btn " + (enabled ? "active" : "");
+}
+
+function updateFlatFlightIndicator(enabled) {
+  const indicator = document.getElementById("flat-flight-status");
+  if (!indicator) return;
+  indicator.textContent = enabled ? "FLAT FLIGHT: ON" : "FLAT FLIGHT: OFF";
+  indicator.className =
+    "state-indicator flat-flight " + (enabled ? "on" : "off");
 }
 
 // -- Hardware status --

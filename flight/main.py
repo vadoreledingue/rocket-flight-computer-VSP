@@ -131,6 +131,11 @@ class FlightController:
             except Exception as exc:
                 print(f"[REPORT] Failed to generate report for flight {ended_flight_id}: {exc}",
                       file=sys.stderr)
+            finally:
+                self.state_machine.reset()
+                if self._previous_state != self.state_machine.state:
+                    print(f"[STATE] {self._previous_state} -> {self.state_machine.state}")
+                    self._previous_state = self.state_machine.state
 
         if now - self._last_config_check >= 1.0:
             self.config.reload()

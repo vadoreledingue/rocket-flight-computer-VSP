@@ -38,6 +38,13 @@ class StateMachine:
         self._stable_since: Optional[float] = None
         self._last_altitude: Optional[float] = None
 
+    def _reset_flight_progress(self) -> None:
+        self._falling_count = 0
+        self._max_altitude = 0.0
+        self._armed_time = None
+        self._stable_since = None
+        self._last_altitude = None
+
     @property
     def state(self) -> FlightState:
         return self._state
@@ -49,15 +56,15 @@ class StateMachine:
     def arm(self) -> None:
         if self._state == FlightState.IDLE:
             self._state = FlightState.ARMED
-            self._falling_count = 0
-            self._max_altitude = 0.0
-            self._armed_time = None
-            self._stable_since = None
-            self._last_altitude = None
+            self._reset_flight_progress()
 
     def disarm(self) -> None:
         if self._state == FlightState.ARMED:
-            self._state = FlightState.IDLE
+            self.reset()
+
+    def reset(self) -> None:
+        self._state = FlightState.IDLE
+        self._reset_flight_progress()
 
     def set_flat_test(self, enabled: bool) -> None:
         self._flat_test = bool(enabled)

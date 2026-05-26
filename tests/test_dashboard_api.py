@@ -96,6 +96,17 @@ def test_api_status_returns_json(seeded_client):
     data = json.loads(resp.data)
     assert "state" in data
     assert "pressure" in data
+    assert "flat_test" in data
+
+
+def test_api_status_includes_flat_test_flag(seeded_client):
+    seeded_client.application.config["config_manager"].set("flat_test", True)
+
+    resp = seeded_client.get("/api/status")
+
+    assert resp.status_code == 200
+    data = json.loads(resp.data)
+    assert data["flat_test"] is True
 
 
 def test_api_config_get(client):

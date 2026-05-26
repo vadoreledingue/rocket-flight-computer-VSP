@@ -11,10 +11,13 @@ def create_api_blueprint() -> Blueprint:
     @bp.route("/api/status")
     def status():
         db = current_app.config["db"]
+        cfg = current_app.config["config_manager"]
         rows = db.get_latest_readings(count=1)
+        payload = dict(rows[0]) if rows else {"state": "IDLE"}
+        payload["flat_test"] = bool(cfg.get("flat_test"))
         if rows:
-            return jsonify(rows[0])
-        return jsonify({"state": "IDLE"})
+            return jsonify(payload)
+        return jsonify(payload)
 
     @bp.route("/api/history")
     def history():

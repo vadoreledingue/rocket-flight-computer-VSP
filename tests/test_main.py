@@ -107,6 +107,25 @@ def test_report_generation_runs_once_after_landing(db_path, mock_sensors):
     ctrl.tick()
 
     ctrl.report_manager.generate_for_flight.assert_called_once_with(active_flight_id)
+    assert ctrl.state_machine.state == FlightState.IDLE
+
+
+def test_controller_returns_to_idle_even_if_report_generation_fails(db_path, mock_sensors):
+    bmp280, mpu6050 = mock_sensors
+    ctrl = FlightController(
+        db_path=db_path, bmp280_sensor=bmp280, mpu6050_sensor=mpu6050)
+    ctrl.camera = MagicMock()
+    ctrl.camera.is_running = True
+    ctrl.report_manager = MagicMock()
+    ctrl.report_manager.generate_for_flight.side_effect = RuntimeError("boom")
+
+    ctrl.state_machine.arm()
+    ctrl.tick()
+
+    ctrl.state_machine._state = FlightState.LANDED
+    ctrl.tick()
+
+    assert ctrl.state_machine.state == FlightState.IDLE
 
 
 def test_camera_restarts_in_active_flight_with_same_flight_id(db_path, mock_sensors):
