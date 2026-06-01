@@ -26,6 +26,7 @@ The dashboard also exposes Raspberry Pi supply-voltage status through `vcgencmd 
 ```text
 rocket-flight-computer-VSP/
 |-- flight/
+|   |-- __init__.py
 |   |-- main.py
 |   |-- state_machine.py
 |   |-- altitude.py
@@ -36,21 +37,38 @@ rocket-flight-computer-VSP/
 |   |-- camera.py
 |   |-- orientation.py
 |   `-- sensors/
+|       |-- __init__.py
 |       |-- bmp280.py
 |       `-- mpu6050.py
 |-- dashboard/
+|   |-- __init__.py
 |   |-- app.py
 |   |-- api.py
-|   |-- templates/
-|   `-- static/
+|   |-- static/
+|   |   |-- css/
+|   |   |   `-- cockpit.css
+|   |   `-- js/
+|   |       |-- gauges.js
+|   |       |-- main.js
+|   |       |-- report.js
+|   |       `-- rocket3d.js
+|   `-- templates/
+|       |-- dashboard.html
+|       |-- flight_reports.html
+|       `-- test_rocket3d.html
 |-- db/
 |   `-- schema.sql
 |-- config/
-|   |-- rocket-flight.service
-|   `-- rocket-dashboard.service
+|   |-- rocket-dashboard.service
+|   `-- rocket-flight.service
+|-- docs/
+|   `-- ARCHITECTURE.md
 |-- scripts/
 |   `-- deploy.sh
+|-- requirements.txt
+|-- setup.py
 `-- tests/
+  |-- (unit tests)
 ```
 
 ## Flight State Machine
@@ -214,6 +232,7 @@ Useful environment variables:
 ## Documentation
 
 - Architecture details: `ARCHITECTURE.md`
+- Hardware and wiring: `docs/MATERIEL_ET_BRANCHEMENTS.md`
 - Design spec: `docs/superpowers/specs/2026-04-16-rocket-flight-computer-design.md`
 
 ## License
