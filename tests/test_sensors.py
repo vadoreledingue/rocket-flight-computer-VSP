@@ -30,7 +30,6 @@ class TestMPU6050:
     def test_read_returns_orientation_and_accel(self):
         sensor = MPU6050Sensor.__new__(MPU6050Sensor)
         sensor._device = MagicMock()
-        sensor._fallback = False
         sensor._initialized = True
         sensor._device.get_accel_data = MagicMock(
             return_value={"x": 0.1, "y": 0.2, "z": 9.8})
@@ -48,7 +47,6 @@ class TestMPU6050:
     def test_read_returns_none_on_error(self):
         sensor = MPU6050Sensor.__new__(MPU6050Sensor)
         sensor._device = MagicMock()
-        sensor._fallback = False
         sensor._initialized = True
         sensor._device.get_accel_data = MagicMock(side_effect=OSError("I2C"))
         data = sensor.read()
